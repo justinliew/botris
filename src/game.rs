@@ -37,7 +37,7 @@ pub enum GameEvent {
 // 12 x 6 is the size of the board
 
 #[derive(Clone,Copy)]
-enum Cell {
+pub enum Cell {
     Empty,
     Single(u32),
     Block(u32,usize,usize), // TODO figure out how to represent this    
@@ -49,17 +49,32 @@ impl Cell {
     }
 }
 
-type Row = [Cell;6];
+pub const NUM_ROWS : usize = 12;
+pub const NUM_COLS : usize = 6;
+type Row = [Cell;NUM_COLS];
+
 
 pub struct Board {
-    delta: f64, // scroll between 0. and 1. of a row
-    rows: [Row;12],
+    pub delta: f64, // scroll between 0. and 1. of a row
+    pub rows: [Row;NUM_ROWS],
     bottom: usize, // this is the bottom row; it moves backwards through the indices
 }
 
 impl Board {
     pub fn new() -> Self {
-        Board { delta: 0., rows: [[Cell::new(); 6]; 12], bottom: 0 }
+        Board { delta: 0., rows: [[Cell::new(); NUM_COLS]; NUM_ROWS], bottom: 0 }
+    }
+
+    pub fn get_row(&self, index: usize) -> &Row {
+        // TODO scrolling will need to be taken into account here
+        &self.rows[index]
+    }
+
+    pub fn update(&mut self, dt: f64) {
+        self.delta += (dt / 4.);
+        if self.delta >= 1. {
+            self.delta = 0.;
+        }
     }
 }
 
@@ -109,7 +124,8 @@ impl Game {
 				}
 			},
 			GameState::Playing => {
-                // TODO game goes here
+                self.board.update(dt);
+
 			},
 			GameState::Death(ref mut timer) => {
 				*timer -= dt;

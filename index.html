@@ -418,8 +418,14 @@ const buttonTemplate = `
 			}
 
             function draw_block(id, x, y, width, height) {
-				ctx.fillStyle = "darkred";
-				ctx.fillRect(x,y,width,height);				
+                if (width != height)
+                    console.log(x,y,width,height);
+                if (id == 0) {
+                    ctx.fillStyle = "darkred";
+                } else if (id == 1) {
+                    ctx.fillStyle = "darkgreen";
+                }
+				ctx.fillRect(x+1,y+1,width-1,height-1);				
             }
 
 			function check_high_score() {
