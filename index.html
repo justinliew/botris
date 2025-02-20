@@ -416,14 +416,29 @@ const buttonTemplate = `
 					start_intro_anim = false;
 				}
 			}
+			
+			function draw_cursor_blocks(x, y, width, height) {
+				ctx.strokeStyle = "white";
+				ctx.lineWidth = 10;
+				ctx.strokeRect(x,y,width,height);				
+				ctx.strokeRect(x+width,y,width,height);				
+			}
 
             function draw_block(id, x, y, width, height) {
-                if (width != height)
-                    console.log(x,y,width,height);
                 if (id == 0) {
                     ctx.fillStyle = "darkred";
                 } else if (id == 1) {
                     ctx.fillStyle = "darkgreen";
+				} else if (id == 1) {
+                    ctx.fillStyle = "yellow";
+				} else if (id == 2) {
+                    ctx.fillStyle = "blue";
+				} else if (id == 3) {
+                    ctx.fillStyle = "cyan";
+				} else if (id == 4) {
+                    ctx.fillStyle = "white";
+				} else if (id == 5) {
+                    ctx.fillStyle = "red";
                 }
 				ctx.fillRect(x+1,y+1,width-1,height-1);				
             }
@@ -535,7 +550,7 @@ const buttonTemplate = `
 			}
 
 			// The real loading and running of our wasm starts here
-			let imports = { console_log_int, console_log_double, clear_screen, draw_name_picker, check_high_score, wait_outro_complete, wait_high_score, draw_intro, draw_block, handle_game_over, update_local_score, new_session };
+			let imports = { console_log_int, console_log_double, clear_screen, draw_name_picker, check_high_score, wait_outro_complete, wait_high_score, draw_intro, draw_block, draw_cursor_blocks, handle_game_over, update_local_score, new_session };
 			imports.Math_atan = Math.atan;
 			imports.sin = Math.sin;
 			imports.cos = Math.cos;
@@ -571,7 +586,7 @@ const buttonTemplate = `
 			let mod = results.instance;
 			module.update = mod.exports.update;
 			module.key_pressed = mod.exports.key_pressed;
-			module.toggle_fire = mod.exports.toggle_fire;
+			module.toggle_action = mod.exports.toggle_action;
 			module.toggle_left = mod.exports.toggle_left;
 			module.toggle_right = mod.exports.toggle_right;
 			module.toggle_up = mod.exports.toggle_up;
@@ -656,7 +671,7 @@ const buttonTemplate = `
 					} else if (ndx != buttonids.PAD_TOP && ndx != buttonids.PAD_BOTTOM ) {
 						if (button.pressed) {
 							module.key_pressed(" ", true);
-							module.toggle_fire(true);
+							module.toggle_action(true);
 							all_released = false;
 						}
 					}
@@ -665,7 +680,7 @@ const buttonTemplate = `
 					value.textContent = `${button.value.toFixed(2)}`;
 				});
 				if (all_released) {
-					module.toggle_fire(false);
+					module.toggle_action(false);
 					module.key_pressed(" ", false);
 				}
 				if (!direction) {
@@ -691,7 +706,7 @@ const buttonTemplate = `
 						module.toggle_down(b);
 						break;
 					case " ":
-						module.toggle_fire(b);
+						module.toggle_action(b);
 						break;
 					case "s":
 						module.toggle_alt(b);
@@ -736,7 +751,7 @@ const buttonTemplate = `
 				let progress = (timestamp - prevTimestamp) / 1000;
 				addNewPads();
 				Object.values(gamepadsByIndex).forEach(processController);
-				module.update(progress);
+				module.update(progress, Math.random() * 10,Math.random() * 10,Math.random() * 10,Math.random() * 10,Math.random() * 10,Math.random() * 10);
 				module.draw(progress);
 
 				// Some bookkeeping

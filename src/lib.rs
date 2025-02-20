@@ -34,10 +34,10 @@ pub unsafe extern "C" fn resize(width: c_uint, height: c_uint) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn update(dt: c_double) {
+pub unsafe extern "C" fn update(dt: c_double, r0: c_uint, r1: c_uint, r2: c_uint, r3: c_uint, r4: c_uint, r5: c_uint) {
     let data: &mut GameData = &mut GAME.lock().unwrap();
 
-	data.game.update(&data.input, dt);
+	data.game.update(&data.input, dt, [r0,r1,r2,r3,r4,r5]);
 
 }
 
@@ -85,9 +85,9 @@ pub extern "C" fn toggle_down(b: c_int) {
 }
 
 #[no_mangle]
-pub extern "C" fn toggle_fire(b: c_int) {
+pub extern "C" fn toggle_action(b: c_int) {
     let data = &mut GAME.lock().unwrap();
-    data.input.fire = int_to_bool(b);
+    data.input.action = int_to_bool(b);
 }
 
 #[no_mangle]

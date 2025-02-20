@@ -57,24 +57,50 @@ type Row = [Cell;NUM_COLS];
 pub struct Board {
     pub delta: f64, // scroll between 0. and 1. of a row
     pub rows: [Row;NUM_ROWS],
+ 	/// user cursor
+	 pub user_row: usize,
+	 pub user_col: usize, 
     bottom: usize, // this is the bottom row; it moves backwards through the indices
 }
 
 impl Board {
     pub fn new() -> Self {
-        Board { delta: 0., rows: [[Cell::new(); NUM_COLS]; NUM_ROWS], bottom: 0 }
+        Board { delta: 0., rows: [[Cell::new(); NUM_COLS]; NUM_ROWS], user_row: 0, user_col: 3, bottom: 0 }
     }
 
     pub fn get_row(&self, index: usize) -> &Row {
         // TODO scrolling will need to be taken into account here
-        &self.rows[index]
+        &self.rows[(self.bottom + index) % NUM_ROWS]
     }
 
-    pub fn update(&mut self, dt: f64) {
-        self.delta += (dt / 4.);
+	pub fn get_row_mut(&mut self, index: usize) -> &mut Row {
+        // TODO scrolling will need to be taken into account here
+        &mut self.rows[(self.bottom + index) % NUM_ROWS]
+    }
+
+	pub fn new_bottom_row(&mut self, rand: [u32;6]) {
+			// rows appear randomly not at the bottom
+			let r = self.get_row_mut(0);
+			r[0] = Cell::Single(rand[0]);
+			r[1] = Cell::Single(rand[1]);
+			r[2] = Cell::Single(rand[2]);
+			r[3] = Cell::Single(rand[3]);
+			r[4] = Cell::Single(rand[4]);
+			r[5] = Cell::Single(rand[5]);
+	}
+
+    pub fn update(&mut self, dt: f64, rand: [u32;6]) {
         if self.delta >= 1. {
             self.delta = 0.;
+			if self.bottom == 0 {
+				self.bottom = NUM_ROWS-1;
+			} else {
+				self.bottom -= 1;
+			}
+			self.new_bottom_row(rand);
+			self.user_row+=1;
         }
+        self.delta += dt / 4.;
     }
 }
 
@@ -111,7 +137,7 @@ impl Game {
 		self.sender.send(event).expect("Wasn't able to send event");
 	}
 
-	pub unsafe fn update(&mut self, input: &Input, dt: f64) {
+	pub unsafe fn update(&mut self, input: &Input, dt: f64, rand: [u32;6]) {
 		match self.game_state {
 			GameState::Intro(ref mut timer) => {
 				if *timer >= 0. {
@@ -124,7 +150,7 @@ impl Game {
 				}
 			},
 			GameState::Playing => {
-                self.board.update(dt);
+                self.board.update(dt, rand);
 
 			},
 			GameState::Death(ref mut timer) => {
@@ -148,9 +174,9 @@ impl Game {
 					_ => {},
 				}
 			},
-			GameState::ShowHighScore(ref mut fire,ref mut left,ref mut right) => {
+			GameState::ShowHighScore(ref mut action,ref mut left,ref mut right) => {
 				let mut advance = false;
-				if !input.fire && *fire {
+				if !input.action && *action {
 					if self.letter_index == 2 {
 						advance = true;
 					} else {
@@ -170,7 +196,7 @@ impl Game {
 						self.cur_letter = 0;
 					}
 				}
-				*fire = input.fire;
+				*action = input.action;
 				*left = input.left;
 				*right = input.right;
 				if advance {

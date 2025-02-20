@@ -5,6 +5,6 @@ pub struct Input {
 	pub right: bool,
 	pub up: bool,
 	pub down: bool,
-	pub fire: bool,
+	pub action: bool,
 	pub alt: bool,
 }
