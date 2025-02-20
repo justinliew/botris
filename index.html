@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<style>
+		html,
+		body {
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			border: 0;
+			overflow: hidden;
+			/*  Disable scrollbars */
+			display: block;
+			/* No floating content on sides */
+		}
+
+		#topbar {
+			background-color: black;
+		}
+
+		#namediv {
+			display: none;
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			background-color: blue;
+			font-family: courier;
+			width: 600px;
+			height: 100px;
+			padding: 20px;
+			border: 1px solid white;
+		}
+
+		#leaderboard,
+		tr {
+			background-color: black;
+			color: green;
+			font-family: courier;
+		}
+
+		#gamearea {
+			z-index: 0;
+		}
+		#animation {
+			z-index: 1;
+		}
+		#namediv {
+			z-index: 2;
+		}
+	</style>
+</head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js" integrity="sha512-jEnuDt6jfecCjthQAJ+ed0MTVA++5ZKmlUcmDGBv2vUI/REn6FuIdixLNnQT+vKusE2hhTk2is3cFvv5wA+Sgg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<body id="bodyid">
+	<div id="gamediv">
+		<canvas id="topbar" style='position:absolute; left:0px; top:0px; width: 100%; height: 10%'></canvas>
+		<div id="animation" style='position:absolute; left:0px; top:5%; width: 80%; height: 100%'></div>
+		<canvas id="gamearea" style='position:absolute; left:0px; top:10%; width: 80%; height: 90%'></canvas>
+		<div id="leaderboard" style='position:absolute; left:80%; top:10%; width: 50%; height: 100%'></div>
+		</div>
+	</div>
+
+	<div id="namediv">
+		You got a high score! Enter your name: <input id="player_name" value="" />
+	</div>
+
+	<script>
+
+		let high_score_checked = false;
+		let has_high_score = false;
+		let high_score_index = 0;
+		let cur_high_score_letter = 0;
+		let high_score_name_letters = [];
+		let submit_high_score = false;
+		let start_explosion_anim = true;
+		let start_intro_anim = true;
+		let intro_anim = {};
+		let start_outro_anim = true;
+		let outro_anim = {};
+		let outro_complete = 0;
+
+		let sprites = [];
+		let module = {};
+		let leaderboard_table = {};
+		let leaderboard = [];
+		let local_score = {};
+		let local_id = "";
+		let playername = "";
+		const gamepadsByIndex = {};
+		const controllerTemplate = `
+<div>
+  <div class="head"><div class="index"></div><div class="id"></div></div>
+  <div class="info"><div class="label">connected:</div><span class="connected"></span></div>
+  <div class="info"><div class="label">mapping:</div><span class="mapping"></span></div>
+  <div class="inputs">
+    <div class="axes"></div>
+    <div class="buttons"></div>
+  </div>
+</div>
+`;
+const axisTemplate = `
+<svg viewBox="-2.2 -2.2 4.4 4.4" width="128" height="128">
+    <circle cx="0" cy="0" r="2" fill="none" stroke="#888" stroke-width="0.04" />
+    <path d="M0,-2L0,2M-2,0L2,0" stroke="#888" stroke-width="0.04" />
+    <circle cx="0" cy="0" r="0.22" fill="red" class="axis" />
+    <text text-anchor="middle" fill="#CCC" x="0" y="2">0</text>
+</svg>
+`
+
+const buttonTemplate = `
+<svg viewBox="-2.2 -2.2 4.4 4.4" width="64" height="64">
+  <circle cx="0" cy="0" r="2" fill="none" stroke="#888" stroke-width="0.1" />
+  <circle cx="0" cy="0" r="0" fill="none" fill="red" class="button" />
+  <text class="value" dominant-baseline="middle" text-anchor="middle" fill="#CCC" x="0" y="0">0.00</text>
+  <text class="index" alignment-baseline="hanging" dominant-baseline="hanging" text-anchor="start" fill="#CCC" x="-2" y="-2">0</text>
+</svg>
+`;
+
+	const buttonids = {
+		FACE_1: 0, // Face (main) buttons
+		FACE_2: 1,
+		FACE_3: 2,
+		FACE_4: 3,
+		LEFT_SHOULDER: 4, // Top shoulder buttons
+		RIGHT_SHOULDER: 5,
+		LEFT_SHOULDER_BOTTOM: 6, // Bottom shoulder buttons
+		RIGHT_SHOULDER_BOTTOM: 7,
+		SELECT: 8,
+		START: 9,
+		LEFT_ANALOGUE_STICK: 10, // Analogue sticks (if depressible)
+		RIGHT_ANALOGUE_STICK: 11,
+		PAD_TOP: 12, // Directional (discrete) pad
+		PAD_BOTTOM: 13,
+		PAD_LEFT: 14,
+		PAD_RIGHT: 15
+	};
+
+		function applyDeadZone(number, threshold){
+		percentage = (Math.abs(number) - threshold) / (1 - threshold);
+
+		if(percentage < 0)
+			percentage = 0;
+
+		return percentage * (number > 0 ? 1 : -1);
+		}
+		function addGamepad(gamepad) {
+			console.log('add:', gamepad.index);
+			const elem = document.createElement('div');
+			elem.innerHTML = controllerTemplate;
+
+			const axesElem = elem.querySelector('.axes');
+			const buttonsElem = elem.querySelector('.buttons');
+			
+			const axes = [];
+			for (let ndx = 0; ndx < gamepad.axes.length; ndx += 2) {
+				const div = document.createElement('div');
+				div.innerHTML = axisTemplate;
+				axesElem.appendChild(div);
+				axes.push({
+				axis: div.querySelector('.axis'),
+				value: div.querySelector('text'),
+				});
+			}
+
+			const buttons = [];
+			for (let ndx = 0; ndx < gamepad.buttons.length; ++ndx) {
+				const div = document.createElement('div');
+				div.innerHTML = buttonTemplate;
+				buttonsElem.appendChild(div);
+				div.querySelector('.index').textContent = ndx;
+				buttons.push({
+				circle: div.querySelector('.button'),
+				value: div.querySelector('.value'),
+				});
+			}
+
+			gamepadsByIndex[gamepad.index] = {
+				gamepad,
+				elem,
+				axes,
+				buttons,
+				index: elem.querySelector('.index'),
+				id: elem.querySelector('.id'),
+				mapping: elem.querySelector('.mapping'),
+				connected: elem.querySelector('.connected'),
+			};
+			}
+
+			function removeGamepad(gamepad) {
+			const info = gamepadsByIndex[gamepad.index];
+			if (info) {
+				delete gamepadsByIndex[gamepad.index];
+				info.elem.parentElement.removeChild(info.elem);
+			}
+			}
+
+			function addGamepadIfNew(gamepad) {
+			const info = gamepadsByIndex[gamepad.index];
+			if (!info) {
+				addGamepad(gamepad);
+			} else {
+				// This broke sometime in the past. It used to be
+				// the same gamepad object was returned forever.
+				// Then Chrome only changed to a new gamepad object
+				// is returned every frame.
+				info.gamepad = gamepad;
+			}
+		}
+
+		function addNewPads() {
+			const gamepads = navigator.getGamepads();
+			for (let i = 0; i < gamepads.length; i++) {
+				const gamepad = gamepads[i]
+				if (gamepad) {
+				addGamepadIfNew(gamepad);
+				}
+			}
+		}
+
+		function handleConnect(e) {
+			console.log('connect');
+			addGamepadIfNew(e.gamepad);
+		}
+
+		function handleDisconnect(e) {
+			console.log('disconnect');
+			removeGamepad(e.gamepad);
+		}
+
+		function get_value_from_cookie(key) {
+			var value;
+			var row = document.cookie
+				.split('; ')
+				.find(row => row.startsWith(key));
+			if (typeof row != "undefined") {
+				value = row.split('=')[1];
+			} else {
+				value = "";
+			}
+			return value;
+		}
+
+		function updateTable(table, index, fields, local) {
+			let newRow = table.insertRow(index);
+			for (var i = 0; i < fields.length; ++i) {
+				let newCell = newRow.insertCell(i);
+				if (local)
+					newCell.style.color = "rgb(200, 0, 0)";
+				let newText = document.createTextNode(fields[i]);
+				newCell.appendChild(newText);
+			}
+		}
+
+		function update_leaderboard_entry(table, index, rank, score, name, local) {
+			updateTable(table, index, [rank, name, score], local);
+		}
+
+		// I think we need to keep local score and name better
+		function render_leaderboard(table, lb, name) {
+			table.innerHTML = "";
+			var tbdy = document.createElement('tbody');
+			var rendered_local = false;
+			table.appendChild(tbdy);
+			var i = 0;
+			var lastrank = 1;
+
+			lb.forEach(entry => {
+				update_leaderboard_entry(table, i, i+1, entry.score, entry.name, entry.id == local_id);
+				lastrank = entry.rank;
+				i += 1;
+			});
+
+			var header = table.createTHead();
+			var row = header.insertRow(0);
+			var cell = row.insertCell(0);
+			cell.innerHTML = "<b>" + name + "</b>";
+		}
+
+		function is_in_top_ten(lb) {
+			var ret = true;
+			var count = 1;
+			lb.every(entry => {
+				if (count > 10) {
+					ret = false;
+					return false;
+				}
+				if (entry.name != "Kiosk Player") {
+					count++;
+					if (local_score.score > entry.score) {
+						ret = true;
+						return false;
+					}
+				}
+				return true;
+			});
+			return ret;
+		}
+
+		function check_for_high_score() {
+			high_score_checked = false;
+			has_high_score = false;
+
+			high_score_index = 0;
+			cur_high_score_letter = 0;
+			high_score_name_letters = [];
+			var leaderboard_req = new XMLHttpRequest();
+			leaderboard_req.onload = function (oEvent) {
+				var entries = JSON.parse(leaderboard_req.response);
+				leaderboard = [];
+				entries.forEach((entry, i) => {
+					leaderboard[i] = entry;
+				});
+				if (is_in_top_ten(leaderboard)) {
+					has_high_score = true;
+				} else {
+					has_high_score = false;
+				}
+				high_score_checked = true;
+			}
+			leaderboard_req.open("GET", "https://leaderboard.edgecompute.app/global", true);
+			leaderboard_req.send();
+		}
+
+		function get_leaderboard_entries() {
+			var leaderboard_req = new XMLHttpRequest();
+			leaderboard_req.onload = function (oEvent) {
+				var entries = JSON.parse(leaderboard_req.response);
+				leaderboard = [];
+				let eindex = 0;
+				entries.forEach((entry, i) => {
+					if (entry.id == local_id) {
+						leaderboard[i] = entry;
+					}
+					if (entry.name != "Kiosk Player" && eindex < 10) {
+						leaderboard[i] = entry;
+						eindex++;
+					}
+				});
+				render_leaderboard(leaderboard_table, leaderboard, "Global");
+			}
+			leaderboard_req.open("GET", "https://leaderboard.edgecompute.app/global", true);
+			leaderboard_req.send();
+		}
+
+		// Returns an object containing resources that will be used later for drawing
+		function resources() {
+			let res = {
+//				player: document.createElement('canvas'),
+//				bg: new Image(),
+			}
+
+			leaderboard_table = document.createElement('table');
+			leaderboard_table.style.width = '30%';
+			var tbdy = document.createElement('tbody');
+			leaderboard_table.appendChild(tbdy);
+
+			return res;
+		}
+
+		// We create this here because it will be used from within `imports`
+		let gamearea = document.getElementById('gamearea');
+		let leaderboardglobal_elem = document.getElementById('leaderboard');
+		let topbar = document.getElementById('topbar');
+
+		// Returns an object containing functions that will be linked to our wasm model
+		// This means that they can be called from Rust
+		function imports() {
+			const res = resources();
+			var ctx = gamearea.getContext("2d");
+			var topbar_ctx = topbar.getContext("2d");
+
+			function new_session() {
+				show_game_end_screen = false;
+				start_explosion_anim = true;
+				start_intro_anim = true;
+				start_outro_anim = true;
+				outro_complete = 0;
+				intro_anim.stop();
+				intro_anim.destroy();
+				document.getElementById('animation').style.display = 'none';
+				var session_req = new XMLHttpRequest();
+				session_req.onload = function (oEvent) {
+					local_id = session_req.response;
+					get_leaderboard_entries();
+				}
+				session_req.open("GET", "https://leaderboard.edgecompute.app/new_session", true);
+				session_req.send();
+			}
+
+			function clear_screen() {
+				ctx.fillStyle = "black";
+				ctx.fillRect(0, 0, gamearea.width, gamearea.height);
+				topbar_ctx.fillStyle = "black";
+				topbar_ctx.fillRect(0, 0, topbar.width, topbar.height);
+			}
+
+			function draw_intro() {
+                console.log("draw_intro");
+				if (start_intro_anim) {
+					document.getElementById('animation').style.display = 'block';
+					intro_anim = bodymovin.loadAnimation({
+						container: document.getElementById('animation'),
+						path: 'intro.json',
+						render: 'canvas',
+						loop: true,
+						autoplay: true,
+						name: 'intro_anim'
+					});
+					// setTimeout(() => {
+					// 	anim.stop();
+					// },500);
+
+					start_intro_anim = false;
+				}
+			}
+
+            function draw_block(id, x, y, width, height) {
+				ctx.fillStyle = "darkred";
+				ctx.fillRect(x,y,width,height);				
+            }
+
+			function check_high_score() {
+				outro_anim.stop();
+				outro_anim.destroy();
+				check_for_high_score();
+			}
+
+			function wait_high_score() {
+				if (high_score_checked) {
+					if (has_high_score) {
+						return 2;
+					} else {
+						return 1;
+					}
+				}
+				return 0;
+			}
+
+			function handle_game_over(score) {
+				if (submit_high_score) {
+					let name = "";
+					for (i=0;i<high_score_name_letters.length;++i) {
+						name = name.concat(String.fromCharCode(65 + high_score_name_letters[i]));
+					}
+					var listing_req = new XMLHttpRequest();
+					listing_req.open("POST", "https://leaderboard.edgecompute.app/update_listing", true);
+					listing_req.setRequestHeader("id", local_id);
+					listing_req.setRequestHeader("name", name);
+					listing_req.setRequestHeader("score", local_score.score);
+					listing_req.send();
+					listing_req.onload = function (oEvent) {
+						get_leaderboard_entries();
+					}
+					submit_high_score = false;
+				}
+			}
+
+			function draw_name_picker(letter_index, cur_letter) {
+				if (letter_index != high_score_index) {
+					high_score_name_letters[high_score_index] = cur_high_score_letter;
+				}
+				high_score_index = letter_index;
+				cur_high_score_letter = cur_letter;
+				
+				ctx.fillStyle = "red";
+				ctx.font = "20px courier";
+				ctx.fillText("You got a high score! Enter your initials", 300,300);
+				ctx.font = "30px courier";
+				for (li = 0; li < letter_index+1; ++li) {
+					let letter_offset = li * 110;
+					ctx.strokeStyle = "red";
+					ctx.beginPath();
+					ctx.moveTo(letter_offset + 450, 400);
+					ctx.lineTo(letter_offset + 500, 400);
+					ctx.lineTo(letter_offset + 500, 450);
+					ctx.lineTo(letter_offset + 450, 450);
+					ctx.lineTo(letter_offset + 450, 400);
+					ctx.stroke();
+					ctx.beginPath();
+					ctx.moveTo(letter_offset + 440, 410);
+					ctx.lineTo(letter_offset + 430, 420);
+					ctx.lineTo(letter_offset + 440, 430);
+					ctx.stroke();
+					ctx.beginPath();
+					ctx.moveTo(letter_offset + 510, 410);
+					ctx.lineTo(letter_offset + 520, 420);
+					ctx.lineTo(letter_offset + 510, 430);
+					ctx.stroke();
+
+					if (li == letter_index) {
+						high_score_name_letters[high_score_index] = cur_high_score_letter;
+						let letter = String.fromCharCode(65 + cur_high_score_letter);
+						ctx.fillText(letter, letter_offset + 465,425);
+					} else {
+						let letter = String.fromCharCode(65 + high_score_name_letters[li]);
+						ctx.fillText(letter, letter_offset + 465, 425);
+					}
+				}
+				submit_high_score = true;
+			}
+
+			function wait_outro_complete() {
+				return outro_complete;
+			}
+
+			function console_log_int(value) {
+				console.log(value);
+			}
+
+			function console_log_double(value) {
+				console.log(value);
+			}
+
+			function update_local_score(score) {
+				local_score.score = score;
+
+				var listing_req = new XMLHttpRequest();
+				listing_req.onload = function (oEvent) {
+					get_leaderboard_entries();
+				}
+				listing_req.open("POST", "https://leaderboard.edgecompute.app/update_listing", true);
+				listing_req.setRequestHeader("id", local_id);
+				listing_req.setRequestHeader("name", local_score.name);
+				listing_req.setRequestHeader("score", score);
+				listing_req.send();
+			}
+
+			// The real loading and running of our wasm starts here
+			let imports = { console_log_int, console_log_double, clear_screen, draw_name_picker, check_high_score, wait_outro_complete, wait_high_score, draw_intro, draw_block, handle_game_over, update_local_score, new_session };
+			imports.Math_atan = Math.atan;
+			imports.sin = Math.sin;
+			imports.cos = Math.cos;
+			return imports;
+		}
+
+		// Copy a nul-terminated string from the buffer pointed to.
+		// Consumes the old data and thus deallocated it.
+		function copyCStr(module, ptr) {
+			let orig_ptr = ptr;
+			const collectCString = function* () {
+				let memory = new Uint8Array(module.memory.buffer);
+				while (memory[ptr] !== 0) {
+					if (memory[ptr] === undefined) { throw new Error("Tried to read undef mem") }
+					yield memory[ptr]
+					ptr += 1
+				}
+			}
+
+			const buffer_as_u8 = new Uint8Array(collectCString())
+			const utf8Decoder = new TextDecoder("UTF-8");
+			const buffer_as_utf8 = utf8Decoder.decode(buffer_as_u8);
+			module.dealloc_str(orig_ptr);
+			return buffer_as_utf8
+		}
+
+		// Fetch and instantiate our wasm module
+		fetch("botris.wasm").then(response =>
+			response.arrayBuffer()
+		).then(bytes =>
+			WebAssembly.instantiate(bytes, { env: imports() })
+		).then(results => {
+			let mod = results.instance;
+			module.update = mod.exports.update;
+			module.key_pressed = mod.exports.key_pressed;
+			module.toggle_fire = mod.exports.toggle_fire;
+			module.toggle_left = mod.exports.toggle_left;
+			module.toggle_right = mod.exports.toggle_right;
+			module.toggle_up = mod.exports.toggle_up;
+			module.toggle_down = mod.exports.toggle_down;
+			module.toggle_alt = mod.exports.toggle_alt;
+			module.resize = mod.exports.resize;
+			module.draw = mod.exports.draw;
+			module.init = mod.exports.init;
+			module.alloc = mod.exports.alloc;
+			module.dealloc = mod.exports.dealloc;
+			module.dealloc_str = mod.exports.dealloc_str;
+			module.memory = mod.exports.memory;
+
+			module.init();
+
+			local_score.name = "Kiosk Player"; // TODO add unique id to this?
+			document.getElementById('gamediv').style.display = 'block';
+			document.getElementById('namediv').style.display = 'none';
+			local_score.score = 0;
+
+			get_leaderboard_entries();
+			// TODO set timer for get_leaderboard_entries
+
+			// Input processing
+			const keys = ['index', 'id', 'connected', 'mapping', /*'timestamp'*/];
+			function processController(info) {
+				const {elem, gamepad, axes, buttons} = info;
+				const lines = [`gamepad  : ${gamepad.index}`];
+				for (const key of keys) {
+					info[key].textContent = gamepad[key];
+				}
+
+				let lr = applyDeadZone(gamepad.axes[0], 0.1);
+				let ud = applyDeadZone(gamepad.axes[1], 0.1);
+				let direction = false;
+				if (lr < 0.0) {
+					module.toggle_left(true);
+					module.toggle_right(false);
+					direction = true;
+				} else if (lr > 0.0) {
+					module.toggle_left(false);
+					module.toggle_right(true);
+					direction = true;
+				}
+				if (ud < 0.0) {
+					module.toggle_up(true);
+					module.toggle_down(false);
+					direction = true;
+				} else if (ud > 0.0) {
+					module.toggle_up(false);
+					module.toggle_down(true);
+					direction = true;
+				}
+				let all_released = true;
+				buttons.forEach(({circle, value}, ndx) => {
+					const button = gamepad.buttons[ndx];
+
+					if (ndx == buttonids.PAD_LEFT) {
+						if (button.pressed) {
+							module.toggle_left(true);
+							module.toggle_right(false);
+							direction = true;
+						}
+					} else if (ndx == buttonids.PAD_RIGHT) {
+						if (button.pressed) {
+							module.toggle_left(false);
+							module.toggle_right(true);
+							direction = true;
+						}
+					} else if (ndx == buttonids.PAD_TOP) {
+						if (button.pressed) {
+							module.toggle_up(true);
+							module.toggle_down(false);
+							direction = true;
+						}
+					} else if (ndx == buttonids.PAD_BOTTOM) {
+						if (button.pressed) {
+							module.toggle_up(false);
+							module.toggle_down(true);
+							direction = true;
+						}
+					} else if (ndx != buttonids.PAD_TOP && ndx != buttonids.PAD_BOTTOM ) {
+						if (button.pressed) {
+							module.key_pressed(" ", true);
+							module.toggle_fire(true);
+							all_released = false;
+						}
+					}
+					circle.setAttributeNS(null, 'r', button.value * 2);
+					circle.setAttributeNS(null, 'fill', button.pressed ? 'red' : 'gray');
+					value.textContent = `${button.value.toFixed(2)}`;
+				});
+				if (all_released) {
+					module.toggle_fire(false);
+					module.key_pressed(" ", false);
+				}
+				if (!direction) {
+					module.toggle_left(false);
+					module.toggle_right(false);
+					module.toggle_up(false);
+					module.toggle_down(false);
+				}
+			}
+
+			function processKey(key, b) {
+				switch (key) {
+					case "ArrowLeft":
+						module.toggle_left(b);
+						break;
+					case "ArrowRight":
+						module.toggle_right(b);
+						break;
+					case "ArrowUp":
+						module.toggle_up(b);
+						break;
+					case "ArrowDown":
+						module.toggle_down(b);
+						break;
+					case " ":
+						module.toggle_fire(b);
+						break;
+					case "s":
+						module.toggle_alt(b);
+						break;
+				}
+				module.key_pressed(key, b);
+			}
+			document.addEventListener('keydown', e => processKey(e.key, true));
+			document.addEventListener('keyup', e => processKey(e.key, false));
+			window.addEventListener('gamepadconnected', e => handleConnect(e));
+			window.addEventListener('gamepaddisconnected', e => handleDisconnect);
+
+			// Resizing
+			function resize() {
+				// We make the gamearea somewhat smaller to get some zooming
+				gamearea.width = window.innerWidth * 0.8;
+				gamearea.height = window.innerHeight * 0.9;
+				topbar.width = window.innerWidth;
+				topbar.height = window.innerHeight * 0.1;
+				leaderboardglobal_elem.width = window.innerWidth * 0.2;
+				leaderboardglobal_elem.height = window.innerHeight * 0.9;
+				let scale = module.resize(gamearea.width, gamearea.height);
+				console.log("resize: ", gamearea.width, gamearea.height, window.innerWidth, window.innerHeight, scale);
+			}
+			window.addEventListener('resize', () => {
+				resize();
+			});
+
+			// Game loop
+			let start = null;
+			let prevTimestamp = null;
+			let drawAndUpdate = (timestamp) => {
+				// Initialization
+				if (!prevTimestamp) {
+					start = timestamp;
+					prevTimestamp = timestamp;
+					requestAnimationFrame(drawAndUpdate);
+					return;
+				}
+
+				// Update and draw
+				let progress = (timestamp - prevTimestamp) / 1000;
+				addNewPads();
+				Object.values(gamepadsByIndex).forEach(processController);
+				module.update(progress);
+				module.draw(progress);
+
+				// Some bookkeeping
+				prevTimestamp = timestamp;
+				requestAnimationFrame(drawAndUpdate);
+			};
+
+			resize();
+			drawAndUpdate();
+		});
+	</script>
+</body>
+
+</html>
