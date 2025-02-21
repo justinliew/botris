@@ -751,7 +751,7 @@ const buttonTemplate = `
 				let progress = (timestamp - prevTimestamp) / 1000;
 				addNewPads();
 				Object.values(gamepadsByIndex).forEach(processController);
-				module.update(progress, Math.random() * 10,Math.random() * 10,Math.random() * 10,Math.random() * 10,Math.random() * 10,Math.random() * 10);
+				module.update(progress, Math.random() * 6,Math.random() * 6,Math.random() * 6,Math.random() * 6,Math.random() * 6,Math.random() * 6);
 				module.draw(progress);
 
 				// Some bookkeeping

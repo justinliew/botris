@@ -68,6 +68,14 @@ impl Board {
         Board { delta: 0., rows: [[Cell::new(); NUM_COLS]; NUM_ROWS], user_row: 0, user_col: 3, bottom: 0 }
     }
 
+	fn swap_pieces_at_cursor(&mut self) {
+		let col = self.user_col;
+		let row = self.get_row_mut(self.user_row);
+		let tmp = row[col];
+		row[col] = row[col+1];
+		row[col+1] = tmp;
+	}
+
     pub fn get_row(&self, index: usize) -> &Row {
         // TODO scrolling will need to be taken into account here
         &self.rows[(self.bottom + index) % NUM_ROWS]
@@ -112,6 +120,12 @@ pub struct Game {
 	/// state of the game
 	pub game_state: GameState,
 
+	last_left: (bool,f64),
+	last_right: (bool,f64),
+	last_up: (bool,f64),
+	last_down: (bool,f64),
+	action_pressed: bool,
+
 	/// name picker
 	pub letter_index: i32,
 	pub cur_letter: i32,
@@ -127,14 +141,86 @@ impl Game {
             board: Board::new(),
             score: 0,
 			game_state: GameState::Intro(0.5),
+			last_left: (false,0.),
+			last_right: (false,0.),
+			last_up: (false,0.),
+			last_down: (false,0.),
+			action_pressed: false,
 			letter_index: 0,
 			cur_letter: 0,
 			sender: tx,
         }
     }
 
+	fn swap_pieces(&mut self) {
+		self.board.swap_pieces_at_cursor();
+	}
+
 	pub fn send_game_event(&mut self, event: GameEvent) {
 		self.sender.send(event).expect("Wasn't able to send event");
+	}
+
+	fn do_input(cur: bool, dir: &mut (bool,f64), ) -> bool {
+		if cur {
+			if !dir.0 {
+				dir.0 = true;
+				dir.1 = 0.;				
+				return true;
+			}
+			if dir.0 && dir.1 < 0.5 {
+				return false;
+			} else if dir.0 && dir.1 > 0.5 {
+				return true;
+			}
+		} else {
+			dir.0 = false;
+			dir.1 = 0.;
+		}
+		return false;
+	}
+
+	pub fn handle_input(&mut self, dt: f64, input: &Input) {
+		if Game::do_input(input.left, &mut self.last_left) {
+			if self.board.user_col > 0 {
+				self.board.user_col -= 1;
+			}
+		}
+		if Game::do_input(input.right, &mut self.last_right) {
+			if self.board.user_col < NUM_COLS-2 {
+				self.board.user_col += 1;
+			}
+		}
+		if Game::do_input(input.up, &mut self.last_up) {
+			if self.board.user_row < NUM_ROWS-2 {
+				self.board.user_row += 1;
+			}
+		}
+		if Game::do_input(input.down, &mut self.last_down) {
+			if self.board.user_row > 0 {
+				self.board.user_row -= 1;
+			}
+		}
+		if input.action {
+			if !self.action_pressed {
+				self.action_pressed = true;
+				self.swap_pieces();
+			}
+		} else {
+			self.action_pressed = false;
+		}
+
+		if self.last_left.0 {
+			self.last_left.1 += dt;
+		}
+		if self.last_right.0 {
+			self.last_right.1 += dt;
+		}
+		if self.last_up.0 {
+			self.last_up.1 += dt;
+		}
+		if self.last_down.0 {
+			self.last_down.1 += dt;
+		}
 	}
 
 	pub unsafe fn update(&mut self, input: &Input, dt: f64, rand: [u32;6]) {
@@ -150,6 +236,7 @@ impl Game {
 				}
 			},
 			GameState::Playing => {
+				self.handle_input(dt, input);
                 self.board.update(dt, rand);
 
 			},
