@@ -527,7 +527,17 @@ const buttonTemplate = `
 				return outro_complete;
 			}
 
+			function console_log() {
+				let outptr = module.get_string();
+				let result = copyCStr(module, outptr);
+				console.log(result);
+			}
+
 			function console_log_int(value) {
+				console.log(value);
+			}
+
+			function console_log_uint(value) {
 				console.log(value);
 			}
 
@@ -549,8 +559,12 @@ const buttonTemplate = `
 				listing_req.send();
 			}
 
+			function get_rand(modulo) {
+				return Math.random() * modulo;
+			}
+
 			// The real loading and running of our wasm starts here
-			let imports = { console_log_int, console_log_double, clear_screen, draw_name_picker, check_high_score, wait_outro_complete, wait_high_score, draw_intro, draw_block, draw_cursor_blocks, handle_game_over, update_local_score, new_session };
+			let imports = { console_log, console_log_int, console_log_uint, console_log_double, clear_screen, draw_name_picker, check_high_score, wait_outro_complete, wait_high_score, draw_intro, draw_block, draw_cursor_blocks, handle_game_over, get_rand, update_local_score, new_session };
 			imports.Math_atan = Math.atan;
 			imports.sin = Math.sin;
 			imports.cos = Math.cos;
@@ -599,6 +613,7 @@ const buttonTemplate = `
 			module.dealloc = mod.exports.dealloc;
 			module.dealloc_str = mod.exports.dealloc_str;
 			module.memory = mod.exports.memory;
+			module.get_string = mod.exports.get_string;
 
 			module.init();
 
@@ -751,7 +766,7 @@ const buttonTemplate = `
 				let progress = (timestamp - prevTimestamp) / 1000;
 				addNewPads();
 				Object.values(gamepadsByIndex).forEach(processController);
-				module.update(progress, Math.random() * 6,Math.random() * 6,Math.random() * 6,Math.random() * 6,Math.random() * 6,Math.random() * 6);
+				module.update(progress);
 				module.draw(progress);
 
 				// Some bookkeeping

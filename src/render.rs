@@ -54,9 +54,9 @@ impl RenderData {
             let row = board.get_row(y);
             for (x,cell) in row.iter().enumerate() {
                 match cell {
-                    Cell::Single(id) => {
+                    Cell::Single(id,offset) => {
                         let xb = dim + x as u32 * dim;
-                        let yb = (NUM_ROWS - y) as u32 * dim - delta as u32;
+                        let yb = (NUM_ROWS - y) as u32 * dim - delta as u32 + (dim as f64 * offset) as u32;
 
                         match y {
                             0 => unsafe {draw_block(*id,xb,yb,dim,delta as u32)},
