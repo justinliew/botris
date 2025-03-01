@@ -6,7 +6,7 @@ extern "C" {
 }
 
 lazy_static! {
-    static ref LOG_STRING: Mutex<String> = Mutex::new(String::from("ABCDEF"));   
+    static ref LOG_STRING: Mutex<String> = Mutex::new(String::from("ABCDEF"));
 }
 
 pub fn log(s: &str) {
@@ -14,7 +14,7 @@ pub fn log(s: &str) {
         let mut log_string = LOG_STRING.lock().unwrap();
         *log_string = s.to_owned();
     }
-    unsafe {console_log()};
+    unsafe { console_log() };
 }
 
 #[no_mangle]
