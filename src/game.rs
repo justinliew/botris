@@ -1,9 +1,7 @@
-use std::os::raw::{c_char, c_int,c_uint};
+use std::os::raw::{c_int,c_uint};
 use std::sync::mpsc::Sender;
 use crate::input::Input;
 use crate::log::*;
-use std::cmp::{min,max};
-use std::ffi::CString;
 
 extern "C" {
 
@@ -61,7 +59,9 @@ type Row = [Cell;NUM_COLS];
 
 pub struct Board {
     pub delta: f64, // scroll between 0. and 1. of a row
-    pub rows: [Row;NUM_ROWS],
+//    rows: [Row;NUM_ROWS],
+	// we are storing this in rows, so to get something you go x + y*NUM_COLS
+	cells: [Cell;NUM_ROWS*NUM_COLS],
  	/// user cursor
 	 pub user_row: usize,
 	 pub user_col: usize, 
@@ -70,12 +70,12 @@ pub struct Board {
 
 impl Board {
     pub fn new() -> Self {
-        Board { delta: 0., rows: [[Cell::new(); NUM_COLS]; NUM_ROWS], user_row: 0, user_col: 2, bottom: 0 }
+        Board { delta: 0., cells: [Cell::new(); NUM_COLS*NUM_ROWS], user_row: 0, user_col: 2, bottom: 0 }
     }
 
 	pub fn init_with_state(&mut self, level: usize) {
 
-		for i in 0..level-1 {
+		for _i in 0..level-1 {
 			self.new_bottom_row();
 			self.push_bottom_row_up();
 		}
@@ -104,21 +104,52 @@ impl Board {
 		}
 	}
 
-	// fn check_matches(&mut self, x: usize, y: usize) -> Vec<(usize,usize)> {
-	// 	for y in 1..NUM_ROWS {
-	// 		let row = self.get_row_mut(y);
-	// 		for (x,cell) in row.iter_mut().enumerate() {
-	// 		}
-	// 	}
-	// 	vec![]
+	pub fn get_cell(&self, x: usize, y: usize) -> &Cell {
+		let base_y = (self.bottom + y) % NUM_ROWS;
+		&self.cells[base_y * NUM_COLS + x]
+	}
+
+	pub fn get_cell_mut(&mut self, x: usize, y: usize) -> &mut Cell {
+		let base_y = (self.bottom + y) % NUM_ROWS;
+		&mut self.cells[base_y * NUM_COLS + x]
+	}
+
+	pub fn below_is_empty(&self, x: usize, y: usize) -> bool {
+		// bottom row is on a solid foundation :)
+		if y == 0 {
+			return false;
+		}
+		let base_y = (self.bottom + y - 1) % NUM_ROWS;
+		self.cells[base_y * NUM_COLS + x] == Cell::Empty
+	}
+
+	pub fn swap_cells(&mut self, x0: usize, y0: usize, x1: usize, y1: usize) {
+		let base_y0 = (self.bottom + y0) % NUM_ROWS;
+		let base_y1 = (self.bottom + y1) % NUM_ROWS;
+		let tmp = self.cells[base_y0 * NUM_COLS + x0];
+		self.cells[base_y0 * NUM_COLS + x0] = self.cells[base_y1 * NUM_COLS + x1];
+		self.cells[base_y1 * NUM_COLS + x1] = tmp;
+	} 
+
+    // pub fn get_row(&self, index: usize) -> &Row {
+    //     &self.rows[(self.bottom + index) % NUM_ROWS]
+    // }
+
+	// // copies out for inspection
+	// pub fn get_row_cloned(&self, index: usize) -> Row {
+    //     self.rows[(self.bottom + index) % NUM_ROWS]
 	// }
+
+	// pub fn get_row_mut(&mut self, index: usize) -> &mut Row {
+    //     // TODO scrolling will need to be taken into account here
+    //     &mut self.rows[(self.bottom + index) % NUM_ROWS]
+    // }
 
 	// TODO this doesn't work on the right side
 	// TODO when we match 4 vertically it removes more
 	fn check_matches(&mut self, x: usize, y: usize) -> Vec<(usize,usize)> {
 
 		let mut ret = vec![];
-		let c = self.rows[y][x];
 
 		let mut last = None;
 		let mut count = 1;
@@ -126,8 +157,8 @@ impl Board {
 		let firstx = Board::clamp_to_board_width(x as i32 -2);
 		let lastx = Board::clamp_to_board_width(x as i32+3);
 		for xi in firstx..lastx {
-			let row = self.get_row(y);
-			if Some(row[xi]) == last && last != Some(Cell::Empty) {
+			let test = self.get_cell(xi, y);
+			if Some(*test) == last && last != Some(Cell::Empty) {
 				count += 1;
 			} else {
 				if count >= 3 {
@@ -138,7 +169,7 @@ impl Board {
 				}
 				count = 1;
 			}
-			last = Some(row[xi]);
+			last = Some(*test);
 		}
 		if count >= 3 {
 			log(&format!("matched at x {} with count {}", lastx, count));
@@ -152,8 +183,8 @@ impl Board {
 		let firsty = Board::clamp_to_board_height(y as i32 -2);
 		let lasty = Board::clamp_to_board_height(y as i32 + 3);
 		for yi in firsty..lasty {
-			let row = self.get_row(yi);
-			if Some(row[x]) == last && last != Some(Cell::Empty) {
+			let test = self.get_cell(x,yi);
+			if Some(*test) == last && last != Some(Cell::Empty) {
 				count += 1;
 			} else {
 				if count >= 3 {
@@ -165,7 +196,7 @@ impl Board {
 					count = 1;
 				}
 			}
-			last = Some(row[x]);
+			last = Some(*test);
 		}
 		if count >= 3 {
 			log(&format!("matched at y {} with count {}", lasty, count));
@@ -181,70 +212,42 @@ impl Board {
 		//log(&format!("deleting blocks {:?}", blocks));
 		let mut fall = vec![];
 		for block in blocks {
-			let row = self.get_row_mut(block.1);
-			row[block.0] = Cell::Empty;
+			let cell = self.get_cell_mut(block.0, block.1);
+			*cell = Cell::Empty;
 			fall.push((block.0,block.1));
 		}
 	}
 
 	fn do_gravity(&mut self, dt: f64) {
-		let mut queued_drop = vec![];
 		for y in 1..NUM_ROWS {
-			let below = self.get_row_cloned(y-1);
-			let row = self.get_row_mut(y);
-			for (x,cell) in row.iter_mut().enumerate() {
-				//log(&format!("Below[{}][{}] = {:?}", x, y-1, below[x]));
-				if below[x] == Cell::Empty {
-					if let Cell::Single(v,o) = cell {
+			for x in 0..NUM_COLS {
+				if self.below_is_empty(x,y) {
+					let cell = self.get_cell_mut(x, y);
+					if let Cell::Single(_v, o) = cell {
 						*o += dt;
-						// TODO switching up the Row format
-						// if dt >= 1. {
-						// 	queued_drop.push((x,y,v));
-						// }
-//						log(&format!("dropping {} {} {}", x,y,o));
+						if *o >= 1. {
+							*o = 0.;
+							self.swap_cells(x, y, x, y-1);
+						}
 					}
 				}
 			}
 		}
-
-		// TODO switching up the Row format
-		// we need to increase y for every one of these
-		// for q in queued_drop {
-		// 	let row = self.get_row_mut(q.1 + 1);
-		// 	row[q.0] = Cell::Single(*q.2,0.);
-		// }
 	}
 
 	fn swap_pieces_at_cursor(&mut self) {
-		let col = self.user_col;
-		let row = self.get_row_mut(self.user_row);
-		let tmp = row[col];
-		row[col] = row[col+1];
-		row[col+1] = tmp;
+		self.swap_cells(self.user_col,self.user_row,self.user_col+1,self.user_row);
 
-		let mut matches = self.check_matches(col, self.user_row);
-		let mut m = self.check_matches(col+1, self.user_row);
+		let mut matches = self.check_matches(self.user_col, self.user_row);
+		let mut m = self.check_matches(self.user_col+1, self.user_row);
 		matches.append(&mut m);
 		matches.sort();
 		matches.dedup();
 		self.delete_blocks(matches);
 	}
 
-    pub fn get_row(&self, index: usize) -> &Row {
-        &self.rows[(self.bottom + index) % NUM_ROWS]
-    }
-
-	// copies out for inspection
-	pub fn get_row_cloned(&self, index: usize) -> Row {
-        self.rows[(self.bottom + index) % NUM_ROWS]
-	}
-
-	pub fn get_row_mut(&mut self, index: usize) -> &mut Row {
-        // TODO scrolling will need to be taken into account here
-        &mut self.rows[(self.bottom + index) % NUM_ROWS]
-    }
-
 	fn push_bottom_row_up(&mut self) {
+		log(&format!("pushing {} up", self.bottom));
 		if self.bottom == 0 {
 			self.bottom = NUM_ROWS-1;
 		} else {
@@ -254,14 +257,12 @@ impl Board {
 
 	pub fn new_bottom_row(&mut self) {
 		log(&format!("bottom row at {}", self.bottom));
-		// rows appear randomly not at the bottom
-		let r = self.get_row_mut(0);
-		r[0] = Cell::Single(unsafe{get_rand(6)},0.);
-		r[1] = Cell::Single(unsafe{get_rand(6)},0.);
-		r[2] = Cell::Single(unsafe{get_rand(6)},0.);
-		r[3] = Cell::Single(unsafe{get_rand(6)},0.);
-		r[4] = Cell::Single(unsafe{get_rand(6)},0.);
-		r[5] = Cell::Single(unsafe{get_rand(6)},0.);
+		*self.get_cell_mut(0, 0) = Cell::Single(unsafe {get_rand(6)}, 0.);
+		*self.get_cell_mut(1, 0) = Cell::Single(unsafe {get_rand(6)}, 0.);
+		*self.get_cell_mut(2, 0) = Cell::Single(unsafe {get_rand(6)}, 0.);
+		*self.get_cell_mut(3, 0) = Cell::Single(unsafe {get_rand(6)}, 0.);
+		*self.get_cell_mut(4, 0) = Cell::Single(unsafe {get_rand(6)}, 0.);
+		*self.get_cell_mut(5, 0) = Cell::Single(unsafe {get_rand(6)}, 0.);
 	}
 
     pub fn update(&mut self, dt: f64) {

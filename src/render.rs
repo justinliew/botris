@@ -36,7 +36,7 @@ impl RenderData {
         self.screen_height = height;
     }
 
-    unsafe fn handle_game_event(&mut self, event: GameEvent) {
+    unsafe fn handle_game_event(&mut self, _event: GameEvent) {
         // match event {
         //     GameEvent::ScoreChanged(i) => {
         //         update_local_score(i);
@@ -51,9 +51,8 @@ impl RenderData {
         const NUM_ROWS_MIN_1 : usize = NUM_ROWS - 1;
 
         for y in 0..NUM_ROWS {
-            let row = board.get_row(y);
-            for (x,cell) in row.iter().enumerate() {
-                match cell {
+            for x in 0..NUM_COLS {
+                match board.get_cell(x, y) {
                     Cell::Single(id,offset) => {
                         let xb = dim + x as u32 * dim;
                         let yb = (NUM_ROWS - y) as u32 * dim - delta as u32 + (dim as f64 * offset) as u32;
@@ -86,7 +85,7 @@ impl RenderData {
         };
 }
 
-    pub unsafe fn draw(&mut self, game_state: GameState, game: &Game, dt: f64) {
+    pub unsafe fn draw(&mut self, game_state: GameState, game: &Game, _dt: f64) {
         clear_screen();
 
         match game_state {

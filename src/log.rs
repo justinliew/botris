@@ -19,9 +19,7 @@ pub fn log(s: &str) {
 
 #[no_mangle]
 pub extern "C" fn get_string() -> *mut c_char {
-    unsafe {
-        let log_string = LOG_STRING.lock().unwrap();
-        let s = CString::new(log_string.clone()).unwrap();
-        s.into_raw()
-    }
+    let log_string = LOG_STRING.lock().unwrap();
+    let s = CString::new(log_string.clone()).unwrap();
+    s.into_raw()
 }
