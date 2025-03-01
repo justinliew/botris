@@ -125,7 +125,11 @@ impl Board {
             return false;
         }
         let base_y = (self.bottom + y - 1) % NUM_ROWS;
-        self.cells[base_y * NUM_COLS + x] == Cell::Empty
+        match self.cells[base_y * NUM_COLS + x] {
+            Cell::Empty => true,
+            Cell::Single(_, d) => d > 0.,
+            _ => false,
+        }
     }
 
     pub fn swap_cells(&mut self, x0: usize, y0: usize, x1: usize, y1: usize) {
@@ -228,7 +232,7 @@ impl Board {
                 if self.below_is_empty(x, y) {
                     let cell = self.get_cell_mut(x, y);
                     if let Cell::Single(_v, o) = cell {
-                        *o += dt;
+                        *o += (dt * 4.);
                         if *o >= 1. {
                             *o = 0.;
                             self.swap_cells(x, y, x, y - 1);
