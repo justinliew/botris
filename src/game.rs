@@ -40,16 +40,37 @@ pub enum GameEvent {
 
 // 12 x 6 is the size of the board
 
+type FallOffset = f64;
+type DeleteCountdown = f64;
+
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Cell {
     Empty,
-    Single(u32, f64),
+    Single(u32, FallOffset),
+    QueuedDelete(u32, FallOffset, DeleteCountdown),
     _Block(u32, usize, usize), // TODO figure out how to represent this
 }
 
 impl Cell {
     pub fn new() -> Self {
         Cell::Empty
+    }
+
+    pub fn get_val(&self) -> u32 {
+        match self {
+            Cell::Empty => 0,
+            Cell::Single(v, _) => *v,
+            Cell::QueuedDelete(v, _, _) => *v,
+            Cell::_Block(v, _, _) => *v,
+        }
+    }
+
+    pub fn get_fall_offset(&self) -> f64 {
+        match self {
+            Cell::Single(_, o) => *o,
+            Cell::QueuedDelete(_, o, _) => *o,
+            _ => 0.,
+        }
     }
 }
 
@@ -160,9 +181,27 @@ impl Board {
         }
     }
 
+    fn check_queued_deletes(&mut self, dt: f64) {
+        for x in 0..NUM_COLS {
+            for y in 0..NUM_ROWS {
+                let c = self.get_cell_mut(x, y);
+                if let Cell::QueuedDelete(v, _, countdown) = c {
+                    if *countdown > 0. {
+                        *countdown -= dt;
+                    }
+                    if *countdown <= 0. {
+                        *c = Cell::Empty;
+                    }
+                }
+            }
+        }
+    }
+
     fn delete_block(&mut self, x: usize, y: usize) {
         let cell = self.get_cell_mut(x, y);
-        *cell = Cell::Empty;
+        let val = cell.get_val();
+        let offset = cell.get_fall_offset();
+        *cell = Cell::QueuedDelete(val, offset, 0.5);
     }
 
     fn do_gravity(&mut self, dt: f64) {
@@ -210,6 +249,7 @@ impl Board {
 
     pub fn update(&mut self, dt: f64) {
         self.check_matches();
+        self.check_queued_deletes(dt);
         if self.delta >= 1. {
             self.delta = 0.;
             self.push_bottom_row_up();
