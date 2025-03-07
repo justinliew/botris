@@ -127,21 +127,21 @@ impl Board {
                 let c = self.get_cell(x, y);
                 if let Cell::Single(_, _) = c {
                     let mut xi = 0;
-                    while self.get_cell(x + xi, y) == c {
+                    while x + xi + 1 < NUM_COLS - 1 && self.get_cell(x + xi + 1, y) == c {
                         xi += 1;
                     }
                     if xi >= 2 {
-                        for xm in 0..xi {
+                        for xm in 0..xi + 1 {
                             let base_y = (self.bottom + y) % NUM_ROWS;
                             state[base_y * NUM_COLS + x + xm] = 1;
                         }
                     }
                     let mut yi = 0;
-                    while self.get_cell(x, y + yi) == c {
+                    while y + yi + 1 < NUM_ROWS - 1 && self.get_cell(x, y + yi + 1) == c {
                         yi += 1;
                     }
                     if yi >= 2 {
-                        for ym in 0..yi {
+                        for ym in 0..yi + 1 {
                             let base_y = (self.bottom + y + ym) % NUM_ROWS;
                             state[base_y * NUM_COLS + x] = 1;
                         }
@@ -153,15 +153,15 @@ impl Board {
         for x in 0..NUM_COLS {
             for y in 0..NUM_ROWS {
                 let base_y = (self.bottom + y) % NUM_ROWS;
-                if state[base_y + x] == 1 {
-                    self.delete_block(x,y);
+                if state[base_y * NUM_COLS + x] == 1 {
+                    self.delete_block(x, y);
                 }
             }
         }
     }
 
     fn delete_block(&mut self, x: usize, y: usize) {
-        let cell = self.get_cell_mut(x,y);
+        let cell = self.get_cell_mut(x, y);
         *cell = Cell::Empty;
     }
 
@@ -192,7 +192,6 @@ impl Board {
     }
 
     fn push_bottom_row_up(&mut self) {
-        log(&format!("pushing {} up", self.bottom));
         if self.bottom == 0 {
             self.bottom = NUM_ROWS - 1;
         } else {
@@ -201,7 +200,6 @@ impl Board {
     }
 
     pub fn new_bottom_row(&mut self) {
-        log(&format!("bottom row at {}", self.bottom));
         *self.get_cell_mut(0, 0) = Cell::Single(unsafe { get_rand(6) }, 0.);
         *self.get_cell_mut(1, 0) = Cell::Single(unsafe { get_rand(6) }, 0.);
         *self.get_cell_mut(2, 0) = Cell::Single(unsafe { get_rand(6) }, 0.);
