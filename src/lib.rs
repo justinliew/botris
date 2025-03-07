@@ -9,10 +9,6 @@ mod render;
 use game::*;
 use render::*;
 
-extern "C" {
-    fn clear_screen();
-}
-
 #[macro_use]
 extern crate lazy_static;
 

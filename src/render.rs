@@ -9,14 +9,14 @@ extern "C" {
     fn draw_block(_: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
     fn draw_cursor_blocks(_: c_uint, _: c_uint, _: c_uint, _: c_uint);
     fn draw_name_picker(_: c_int, _: c_int);
-    fn update_local_score(_: c_int);
+    fn _update_local_score(_: c_int);
 
 }
 
 pub struct RenderData {
     screen_width: u32,
     screen_height: u32,
-    receiver: Receiver<GameEvent>,
+    _receiver: Receiver<GameEvent>,
     pub sender: Sender<GameEvent>,
 }
 
@@ -26,7 +26,7 @@ impl RenderData {
         RenderData {
             screen_width: 1024,
             screen_height: 768,
-            receiver: rx,
+            _receiver: rx,
             sender: tx,
         }
     }
@@ -36,7 +36,7 @@ impl RenderData {
         self.screen_height = height;
     }
 
-    unsafe fn handle_game_event(&mut self, _event: GameEvent) {
+    unsafe fn _handle_game_event(&mut self, _event: GameEvent) {
         // match event {
         //     GameEvent::ScoreChanged(i) => {
         //         update_local_score(i);
@@ -98,13 +98,13 @@ impl RenderData {
                 self.draw_board(&game.board);
                 self.draw_cursor(&game.board);
             }
-            GameState::Death(_) => {}
+            GameState::_Death(_) => {}
             GameState::CheckHighScore => {}
             GameState::WaitHighScore => {}
             GameState::ShowHighScore(_, _, _) => {
                 draw_name_picker(game.letter_index, game.cur_letter);
             }
-            GameState::GameOver(_) => {}
+            GameState::_GameOver(_) => {}
         }
     }
 }

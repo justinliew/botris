@@ -19,19 +19,19 @@ extern "C" {
 
     fn get_rand(_: c_uint) -> c_uint;
 
-    fn console_log_int(_: c_int);
-    fn console_log_uint(_: c_uint);
+    fn _console_log_int(_: c_int);
+    fn _console_log_uint(_: c_uint);
 }
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum GameState {
     Intro(f64),
     Playing,
-    Death(f64),
+    _Death(f64),
     CheckHighScore,
     WaitHighScore,
     ShowHighScore(bool, bool, bool),
-    GameOver(f64),
+    _GameOver(f64),
 }
 
 pub enum GameEvent {
@@ -44,7 +44,7 @@ pub enum GameEvent {
 pub enum Cell {
     Empty,
     Single(u32, f64),
-    Block(u32, usize, usize), // TODO figure out how to represent this
+    _Block(u32, usize, usize), // TODO figure out how to represent this
 }
 
 impl Cell {
@@ -86,26 +86,6 @@ impl Board {
         self.new_bottom_row();
         // we don't push the last row up because otherwise we end up with a gap at the bottom
         self.user_row = level / 2;
-    }
-
-    fn clamp_to_board_width(n: i32) -> usize {
-        if n < 0 {
-            0
-        } else if n > NUM_COLS as i32 - 1 {
-            NUM_COLS - 1
-        } else {
-            n as usize
-        }
-    }
-
-    fn clamp_to_board_height(n: i32) -> usize {
-        if n < 0 {
-            0
-        } else if n > NUM_ROWS as i32 - 1 {
-            NUM_ROWS - 1
-        } else {
-            n as usize
-        }
     }
 
     pub fn get_cell(&self, x: usize, y: usize) -> &Cell {
@@ -247,7 +227,7 @@ impl Board {
 pub struct Game {
     pub board: Board,
     /// The current score of the player
-    pub score: i32,
+    pub _score: i32,
     /// state of the game
     pub game_state: GameState,
 
@@ -262,7 +242,7 @@ pub struct Game {
     pub cur_letter: i32,
 
     /// Events to other parts of the system
-    sender: Sender<GameEvent>,
+    _sender: Sender<GameEvent>,
 }
 
 impl Game {
@@ -270,7 +250,7 @@ impl Game {
     pub fn new(tx: Sender<GameEvent>) -> Game {
         Game {
             board: Board::new(),
-            score: 0,
+            _score: 0,
             game_state: GameState::Intro(0.5),
             last_left: (false, 0.),
             last_right: (false, 0.),
@@ -279,7 +259,7 @@ impl Game {
             action_pressed: false,
             letter_index: 0,
             cur_letter: 0,
-            sender: tx,
+            _sender: tx,
         }
     }
 
@@ -287,8 +267,8 @@ impl Game {
         self.board.swap_pieces_at_cursor();
     }
 
-    pub fn send_game_event(&mut self, event: GameEvent) {
-        self.sender.send(event).expect("Wasn't able to send event");
+    pub fn _send_game_event(&mut self, event: GameEvent) {
+        self._sender.send(event).expect("Wasn't able to send event");
     }
 
     fn do_input(cur: bool, dir: &mut (bool, f64)) -> bool {
@@ -370,7 +350,7 @@ impl Game {
                 self.handle_input(dt, input);
                 self.board.update(dt);
             }
-            GameState::Death(ref mut timer) => {
+            GameState::_Death(ref mut timer) => {
                 *timer -= dt;
                 if *timer < 0. {
                     self.game_state = GameState::Playing;
@@ -422,7 +402,7 @@ impl Game {
                     self.game_state = GameState::Intro(0.5);
                 }
             }
-            GameState::GameOver(ref mut timer) => {
+            GameState::_GameOver(ref mut timer) => {
                 if *timer >= 0. {
                     *timer -= dt;
                 } else {
