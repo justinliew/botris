@@ -1,4 +1,5 @@
 use crate::game::*;
+use crate::log::*;
 use std::ffi::{c_int, c_uint};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
@@ -44,7 +45,7 @@ impl RenderData {
         // }
     }
 
-    pub fn draw_board(&mut self, board: &Board) {
+    pub fn draw_board(&self, board: &Board) {
         let dim = (self.screen_height - 100) / 12;
         let delta = board.delta * dim as f64;
         const NUM_ROWS_MIN_1: usize = NUM_ROWS - 1;
@@ -71,21 +72,44 @@ impl RenderData {
                             + (dim as f64 * offset) as u32;
 
                         match y {
-                            0 => unsafe { draw_block(*id, xb, yb, dim, delta as u32) },
-                            NUM_ROWS_MIN_1 => unsafe {
-                                draw_block(*id, xb, yb + delta as u32, dim, dim - delta as u32)
-                            },
-                            _ => unsafe { draw_block(*id, xb, yb, dim, dim) },
+                            0 => {
+                                unsafe { draw_block(*id, xb, yb, dim, delta as u32) };
+                                if (countdown * 100.) as u32 % 2 == 0 {
+                                    unsafe { draw_block(99, xb, yb, dim, delta as u32) };
+                                }
+                            }
+                            NUM_ROWS_MIN_1 => {
+                                unsafe {
+                                    draw_block(*id, xb, yb + delta as u32, dim, dim - delta as u32)
+                                };
+                                if (countdown * 100.) as u32 % 2 == 0 {
+                                    unsafe {
+                                        draw_block(
+                                            99,
+                                            xb,
+                                            yb + delta as u32,
+                                            dim,
+                                            dim - delta as u32,
+                                        )
+                                    };
+                                }
+                            }
+                            _ => {
+                                unsafe { draw_block(*id, xb, yb, dim, dim) };
+                                if (countdown * 100.) as u32 % 2 == 0 {
+                                    unsafe { draw_block(99, xb, yb, dim, dim) };
+                                }
+                            }
                         };
                     }
-                    
+
                     _ => {}
                 }
             }
         }
     }
 
-    pub fn draw_cursor(&mut self, board: &Board) {
+    pub fn draw_cursor(&self, board: &Board) {
         let dim = (self.screen_height - 100) / 12;
         let delta = board.delta * dim as f64;
         const NUM_ROWS_MIN_1: usize = NUM_ROWS - 1;
@@ -101,7 +125,7 @@ impl RenderData {
         };
     }
 
-    pub unsafe fn draw(&mut self, game_state: GameState, game: &Game, _dt: f64) {
+    pub unsafe fn draw(&self, game_state: GameState, game: &Game, _dt: f64) {
         clear_screen();
 
         match game_state {

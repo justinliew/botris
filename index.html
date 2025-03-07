@@ -398,7 +398,6 @@ const buttonTemplate = `
 			}
 
 			function draw_intro() {
-                console.log("draw_intro");
 				if (start_intro_anim) {
 					document.getElementById('animation').style.display = 'block';
 					intro_anim = bodymovin.loadAnimation({
@@ -436,10 +435,12 @@ const buttonTemplate = `
 				} else if (id == 3) {
                     ctx.fillStyle = "cyan";
 				} else if (id == 4) {
-                    ctx.fillStyle = "white";
+                    ctx.fillStyle = "orange";
 				} else if (id == 5) {
                     ctx.fillStyle = "red";
-                }
+                } else if (id == 99) {
+					ctx.fillStyle = "white";
+				}
 				ctx.fillRect(x+1,y+1,width-1,height-1);				
             }
 

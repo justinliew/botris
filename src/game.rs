@@ -185,7 +185,7 @@ impl Board {
         for x in 0..NUM_COLS {
             for y in 0..NUM_ROWS {
                 let c = self.get_cell_mut(x, y);
-                if let Cell::QueuedDelete(v, _, countdown) = c {
+                if let Cell::QueuedDelete(_, _, countdown) = c {
                     if *countdown > 0. {
                         *countdown -= dt;
                     }
@@ -201,7 +201,7 @@ impl Board {
         let cell = self.get_cell_mut(x, y);
         let val = cell.get_val();
         let offset = cell.get_fall_offset();
-        *cell = Cell::QueuedDelete(val, offset, 0.5);
+        *cell = Cell::QueuedDelete(val, offset, 0.33);
     }
 
     fn do_gravity(&mut self, dt: f64) {
@@ -247,7 +247,7 @@ impl Board {
         *self.get_cell_mut(5, 0) = Cell::Single(unsafe { get_rand(6) }, 0.);
     }
 
-    pub fn update(&mut self, dt: f64) {
+    pub fn update(&mut self, dt: f64, boost: bool) {
         self.check_matches();
         self.check_queued_deletes(dt);
         if self.delta >= 1. {
@@ -256,7 +256,11 @@ impl Board {
             self.new_bottom_row();
             self.user_row += 1;
         }
-        self.delta += dt / 16.;
+        if boost {
+            self.delta += dt * 5.;
+        } else {
+            self.delta += dt / 16.;
+        }
         self.do_gravity(dt);
     }
 }
@@ -274,6 +278,7 @@ pub struct Game {
     last_up: (bool, f64),
     last_down: (bool, f64),
     action_pressed: bool,
+    boost: bool,
 
     /// name picker
     pub letter_index: i32,
@@ -295,6 +300,7 @@ impl Game {
             last_up: (false, 0.),
             last_down: (false, 0.),
             action_pressed: false,
+            boost: false,
             letter_index: 0,
             cur_letter: 0,
             _sender: tx,
@@ -358,6 +364,12 @@ impl Game {
             self.action_pressed = false;
         }
 
+        if input.alt {
+            self.boost = true;
+        } else {
+            self.boost = false;
+        }
+
         if self.last_left.0 {
             self.last_left.1 += dt;
         }
@@ -386,7 +398,7 @@ impl Game {
             }
             GameState::Playing => {
                 self.handle_input(dt, input);
-                self.board.update(dt);
+                self.board.update(dt, self.boost);
             }
             GameState::_Death(ref mut timer) => {
                 *timer -= dt;
