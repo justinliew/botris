@@ -54,9 +54,13 @@ impl RenderData {
             for x in 0..NUM_COLS {
                 match board.get_cell(x, y) {
                     Cell::Single(id, offset) => {
+                        let offset_v = match offset {
+                            Some(v) => *v,
+                            None => 0.
+                        };
                         let xb = dim + x as u32 * dim;
                         let yb = (NUM_ROWS - y) as u32 * dim - delta as u32
-                            + (dim as f64 * offset) as u32;
+                            + (dim as f64 * offset_v) as u32;
 
                         match y {
                             0 => unsafe { draw_block(*id, xb, yb, dim, delta as u32) },

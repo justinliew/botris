@@ -1,3 +1,11 @@
+/*
+GAMEPLAY TODOs:
+
+- verify that falling blocks don't match as they fall. I thought I fixed this but maybe not?
+- try to not have the new row cause matches.
+
+*/
+
 use crate::input::Input;
 use crate::log::*;
 use std::os::raw::{c_int, c_uint};
@@ -46,7 +54,7 @@ type DeleteCountdown = f64;
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Cell {
     Empty,
-    Single(u32, FallOffset),
+    Single(u32, Option<FallOffset>),
     QueuedDelete(u32, FallOffset, DeleteCountdown),
     _Block(u32, usize, usize), // TODO figure out how to represent this
 }
@@ -67,7 +75,13 @@ impl Cell {
 
     pub fn get_fall_offset(&self) -> f64 {
         match self {
-            Cell::Single(_, o) => *o,
+            Cell::Single(_, o) => {
+                if o.is_some() {
+                    o.unwrap()
+                } else {
+                    0.
+                }
+            },
             Cell::QueuedDelete(_, o, _) => *o,
             _ => 0.,
         }
@@ -127,7 +141,7 @@ impl Board {
         let base_y = (self.bottom + y - 1) % NUM_ROWS;
         match self.cells[base_y * NUM_COLS + x] {
             Cell::Empty => true,
-            Cell::Single(_, d) => d > 0.,
+            Cell::Single(_, d) => d.is_some(),
             _ => false,
         }
     }
@@ -209,12 +223,25 @@ impl Board {
             for x in 0..NUM_COLS {
                 if self.below_is_empty(x, y) {
                     let cell = self.get_cell_mut(x, y);
+                    let mut swap = false;
                     if let Cell::Single(_v, o) = cell {
-                        *o += dt * 4.;
-                        if *o >= 1. {
-                            *o = 0.;
-                            self.swap_cells(x, y, x, y - 1);
+                        if o.is_some() {
+                            let prev_o = o.unwrap();
+                            let mut next_o = prev_o + dt * 4.;
+                            if next_o >= 1. {
+                                next_o = 0.;
+                                swap = true;
+                            }
+                            *o = Some(next_o);
                         }
+                    }
+                    if swap {
+                        self.swap_cells(x, y, x, y - 1);
+                    }
+                } else {
+                    let cell = self.get_cell_mut(x, y);
+                    if let Cell::Single(_v, o) = cell {
+                        *o = None;
                     }
                 }
             }
@@ -239,12 +266,12 @@ impl Board {
     }
 
     pub fn new_bottom_row(&mut self) {
-        *self.get_cell_mut(0, 0) = Cell::Single(unsafe { get_rand(6) }, 0.);
-        *self.get_cell_mut(1, 0) = Cell::Single(unsafe { get_rand(6) }, 0.);
-        *self.get_cell_mut(2, 0) = Cell::Single(unsafe { get_rand(6) }, 0.);
-        *self.get_cell_mut(3, 0) = Cell::Single(unsafe { get_rand(6) }, 0.);
-        *self.get_cell_mut(4, 0) = Cell::Single(unsafe { get_rand(6) }, 0.);
-        *self.get_cell_mut(5, 0) = Cell::Single(unsafe { get_rand(6) }, 0.);
+        *self.get_cell_mut(0, 0) = Cell::Single(unsafe { get_rand(6) }, None);
+        *self.get_cell_mut(1, 0) = Cell::Single(unsafe { get_rand(6) }, None);
+        *self.get_cell_mut(2, 0) = Cell::Single(unsafe { get_rand(6) }, None);
+        *self.get_cell_mut(3, 0) = Cell::Single(unsafe { get_rand(6) }, None);
+        *self.get_cell_mut(4, 0) = Cell::Single(unsafe { get_rand(6) }, None);
+        *self.get_cell_mut(5, 0) = Cell::Single(unsafe { get_rand(6) }, None);
     }
 
     pub fn update(&mut self, dt: f64, boost: bool) {
