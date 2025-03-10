@@ -12,6 +12,8 @@ extern "C" {
     fn draw_name_picker(_: c_int, _: c_int);
     fn _update_local_score(_: c_int);
 
+    // sprite id, frame index, x, y
+    fn draw_sprite(_: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
 }
 
 pub struct RenderData {
@@ -63,11 +65,11 @@ impl RenderData {
                             + (dim as f64 * offset_v) as u32;
 
                         match y {
-                            0 => unsafe { draw_block(*id, xb, yb, dim, delta as u32) },
+                            0 => unsafe { draw_sprite(*id, 0, xb, yb, dim, delta as u32) },
                             NUM_ROWS_MIN_1 => unsafe {
-                                draw_block(*id, xb, yb + delta as u32, dim, dim - delta as u32)
+                                draw_sprite(*id, 0, xb, yb + delta as u32, dim, dim - delta as u32)
                             },
-                            _ => unsafe { draw_block(*id, xb, yb, dim, dim) },
+                            _ => unsafe { draw_sprite(*id, 0, xb, yb, dim, dim) },
                         };
                     }
                     Cell::QueuedDelete(id, offset, countdown) => {
@@ -77,14 +79,14 @@ impl RenderData {
 
                         match y {
                             0 => {
-                                unsafe { draw_block(*id, xb, yb, dim, delta as u32) };
+                                unsafe { draw_sprite(*id, 0, xb, yb, dim, delta as u32) };
                                 if (countdown * 100.) as u32 % 2 == 0 {
-                                    unsafe { draw_block(99, xb, yb, dim, delta as u32) };
+                                    unsafe { draw_block(99 ,xb, yb, dim, delta as u32) };
                                 }
                             }
                             NUM_ROWS_MIN_1 => {
                                 unsafe {
-                                    draw_block(*id, xb, yb + delta as u32, dim, dim - delta as u32)
+                                    draw_sprite(*id, 0 ,xb, yb + delta as u32, dim, dim - delta as u32)
                                 };
                                 if (countdown * 100.) as u32 % 2 == 0 {
                                     unsafe {
@@ -99,7 +101,7 @@ impl RenderData {
                                 }
                             }
                             _ => {
-                                unsafe { draw_block(*id, xb, yb, dim, dim) };
+                                unsafe { draw_sprite(*id, 0, xb, yb, dim, dim) };
                                 if (countdown * 100.) as u32 % 2 == 0 {
                                     unsafe { draw_block(99, xb, yb, dim, dim) };
                                 }

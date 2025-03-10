@@ -1,6 +1,9 @@
 /*
 GAMEPLAY TODOs:
 
+- the top doesn't work with sprites, they don't scroll up
+- if we fall into the bottom row it continuously falls.
+- 3 across in the very right doesn't match.
 - verify that falling blocks don't match as they fall. I thought I fixed this but maybe not?
 - try to not have the new row cause matches.
 
@@ -225,15 +228,16 @@ impl Board {
                     let cell = self.get_cell_mut(x, y);
                     let mut swap = false;
                     if let Cell::Single(_v, o) = cell {
-                        if o.is_some() {
-                            let prev_o = o.unwrap();
-                            let mut next_o = prev_o + dt * 4.;
-                            if next_o >= 1. {
-                                next_o = 0.;
-                                swap = true;
-                            }
-                            *o = Some(next_o);
+                        if o.is_none() {
+                            *o = Some(0.);
                         }
+                        let prev_o = o.unwrap();
+                        let mut next_o = prev_o + dt * 4.;
+                        if next_o >= 1. {
+                            next_o = 0.;
+                            swap = true;
+                        }
+                        *o = Some(next_o);
                     }
                     if swap {
                         self.swap_cells(x, y, x, y - 1);
