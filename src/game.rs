@@ -84,7 +84,7 @@ impl Cell {
                 } else {
                     0.
                 }
-            },
+            }
             Cell::QueuedDelete(_, o, _) => *o,
             _ => 0.,
         }
@@ -144,7 +144,14 @@ impl Board {
         let base_y = (self.bottom + y - 1) % NUM_ROWS;
         match self.cells[base_y * NUM_COLS + x] {
             Cell::Empty => true,
-            Cell::Single(_, d) => d.is_some(),
+            Cell::Single(_, d) => {
+                // if are at y == 1 and we have a cell under us then it will always be stopped
+                if y == 1 {
+                    false
+                } else {
+                    d.is_some()
+                }
+            }
             _ => false,
         }
     }
