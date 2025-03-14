@@ -1,11 +1,10 @@
 /*
 GAMEPLAY TODOs:
 
-- the top doesn't work with sprites, they don't scroll up
-- if we fall into the bottom row it continuously falls.
 - 3 across in the very right doesn't match.
 - verify that falling blocks don't match as they fall. I thought I fixed this but maybe not?
 - try to not have the new row cause matches.
+- timing for falling - do we want a delay?
 
 */
 

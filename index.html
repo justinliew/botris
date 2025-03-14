@@ -423,9 +423,12 @@ const buttonTemplate = `
 				ctx.strokeRect(x+width,y,width,height);				
 			}
 
-			function draw_sprite(sprite_id, frame_index, x, y, width, height) {
+			// x, y is where to draw the sprite
+			// ox and oy are where in the sprite we draw from
+			// width and height are the width and height
+			function draw_sprite(sprite_id, frame_index, x, y, ox, oy, width, height) {
 				if (sprites[sprite_id] != "undefined" && sprites[sprite_id][frame_index] != "undefined") {
-					ctx.putImageData(sprites[sprite_id][frame_index].image_data, x, y, 0, 0, width, height);
+					ctx.putImageData(sprites[sprite_id][frame_index].image_data, x, y, ox, oy, width, height);
 				}
 			}
 
@@ -745,7 +748,7 @@ const buttonTemplate = `
 			Sprites are 12x12, and the enemy game radius is 24
 			So we double the sprites when we init, and then when we render we need to scale by game to screen
 			*/
-			function init_sprites(scale) {
+			function init_sprites(dim) {
 				let enemy0_0 = [
 					0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
 					0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
@@ -932,43 +935,58 @@ const buttonTemplate = `
 					0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 				];
-				init_sprite_frame(0, 0, enemy0_0, 12, scale * 3, 255, 0, 0);
-				init_sprite_frame(0, 1, enemy0_1, 12, scale * 3, 255, 0, 0);
-				init_sprite_frame(1, 0, enemy1_0, 12, scale * 3, 0, 255, 0);
-				init_sprite_frame(1, 1, enemy1_1, 12, scale * 3, 0, 255, 0);
-				init_sprite_frame(2, 0, enemy2_0, 12, scale * 3, 0, 0, 255);
-				init_sprite_frame(2, 1, enemy2_1, 12, scale * 3, 0, 0, 255);
-				init_sprite_frame(3, 0, enemy3_0, 12, scale * 3, 255, 255, 0);
-				init_sprite_frame(3, 1, enemy3_1, 12, scale * 3, 255, 255, 0);
-				init_sprite_frame(4, 0, enemy4_0, 12, scale * 3, 255, 0, 255);
-				init_sprite_frame(4, 1, enemy4_1, 12, scale * 3, 255, 0, 255);
-				init_sprite_frame(5, 0, enemy5_0, 12, scale * 3, 0, 255, 255);
-				init_sprite_frame(5, 1, enemy5_1, 12, scale * 3, 0, 255, 255);
+				init_sprite_frame(0, 0, enemy0_0, 12, dim, 255, 0, 0);
+				init_sprite_frame(0, 1, enemy0_1, 12, dim, 255, 0, 0);
+				init_sprite_frame(1, 0, enemy1_0, 12, dim, 0, 255, 0);
+				init_sprite_frame(1, 1, enemy1_1, 12, dim, 0, 255, 0);
+				init_sprite_frame(2, 0, enemy2_0, 12, dim, 0, 0, 255);
+				init_sprite_frame(2, 1, enemy2_1, 12, dim, 0, 0, 255);
+				init_sprite_frame(3, 0, enemy3_0, 12, dim, 255, 255, 0);
+				init_sprite_frame(3, 1, enemy3_1, 12, dim, 255, 255, 0);
+				init_sprite_frame(4, 0, enemy4_0, 12, dim, 255, 0, 255);
+				init_sprite_frame(4, 1, enemy4_1, 12, dim, 255, 0, 255);
+				init_sprite_frame(5, 0, enemy5_0, 12, dim, 0, 255, 255);
+				init_sprite_frame(5, 1, enemy5_1, 12, dim, 0, 255, 255);
 			}
 
-			function init_sprite_frame(sprite_id, frame_index, data, orig_dim, scale, r, g, b) {
+			function init_sprite_frame(sprite_id, frame_index, data, orig_dim, final_dim, r, g, b) {
 
-				let final_size = Math.floor(scale * orig_dim);
+				let final_size = final_dim;
 
 				if (typeof (sprites[sprite_id]) == "undefined") {
 					sprites[sprite_id] = [];
 				}
 
 				sprites[sprite_id][frame_index] = {
-					image_data: gamearea.getContext("2d").createImageData(final_size, final_size),
-					w: final_size,
-					h: final_size
+					image_data: gamearea.getContext("2d").createImageData(final_dim, final_dim),
+					w: final_dim,
+					h: final_dim
 				}
-				for (var j = 0; j < final_size; ++j) {
-					for (var i = 0; i < final_size; ++i) {
+
+				var scale =  Math.floor(final_dim / orig_dim);
+				var pad = (final_dim % orig_dim) / 2;
+
+				for (var j = pad; j < final_size; j++) {
+					for (var i = pad; i < final_size; i++) {
 						var dest_index = i + j * final_size;
 						var source_index = Math.floor(i / scale) + Math.floor(j / scale) * orig_dim;
 						sprites[sprite_id][frame_index].image_data.data[4 * dest_index] = data[source_index] > 0 ? r : 0;
 						sprites[sprite_id][frame_index].image_data.data[4 * dest_index + 1] = data[source_index] > 0 ? g : 0;
 						sprites[sprite_id][frame_index].image_data.data[4 * dest_index + 2] = data[source_index] > 0 ? b : 0;
 						sprites[sprite_id][frame_index].image_data.data[4 * dest_index + 3] = 255;
-					}
+			}
 				}
+
+				// for (var j = 0; j < final_size; ++j) {
+				// 	for (var i = 0; i < final_size; ++i) {
+				// 		var dest_index = i + j * final_size;
+				// 		var source_index = Math.floor(i / scale) + Math.floor(j / scale) * orig_dim;
+				// 		sprites[sprite_id][frame_index].image_data.data[4 * dest_index] = data[source_index] > 0 ? r : 0;
+				// 		sprites[sprite_id][frame_index].image_data.data[4 * dest_index + 1] = data[source_index] > 0 ? g : 0;
+				// 		sprites[sprite_id][frame_index].image_data.data[4 * dest_index + 2] = data[source_index] > 0 ? b : 0;
+				// 		sprites[sprite_id][frame_index].image_data.data[4 * dest_index + 3] = 255;
+				// 	}
+				// }
 			}
 
 			// Resizing
@@ -982,7 +1000,7 @@ const buttonTemplate = `
 				leaderboardglobal_elem.height = window.innerHeight * 0.9;
 				let scale = module.resize(gamearea.width, gamearea.height);
 				console.log("resize: ", gamearea.width, gamearea.height, window.innerWidth, window.innerHeight, scale);
-				init_sprites(2);
+				init_sprites(Math.ceil((gamearea.height) / 12));
 			}
 			window.addEventListener('resize', () => {
 				resize();
