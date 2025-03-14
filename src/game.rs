@@ -1,7 +1,6 @@
 /*
 GAMEPLAY TODOs:
 
-- 3 across in the very right doesn't match.
 - verify that falling blocks don't match as they fall. I thought I fixed this but maybe not?
 - try to not have the new row cause matches.
 - timing for falling - do we want a delay?
@@ -179,7 +178,7 @@ impl Board {
                 let c = self.get_cell(x, y);
                 if let Cell::Single(_, _) = c {
                     let mut xi = 0;
-                    while x + xi + 1 < NUM_COLS - 1 && self.get_cell(x + xi + 1, y) == c {
+                    while x + xi + 1 < NUM_COLS && self.get_cell(x + xi + 1, y) == c {
                         xi += 1;
                     }
                     if xi >= 2 {
