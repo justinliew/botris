@@ -964,10 +964,11 @@ const buttonTemplate = `
 				}
 
 				var scale =  Math.floor(final_dim / orig_dim);
-				var pad = (final_dim % orig_dim) / 2;
+				var pad = (final_dim % orig_dim);
 
-				for (var j = pad; j < final_size; j++) {
-					for (var i = pad; i < final_size; i++) {
+				// TODO use `pad`. The images aren't quite right, there is some asymmetry and wrapping
+				for (var j = 0; j < final_size; j++) {
+					for (var i = 0; i < final_size; i++) {
 						var dest_index = i + j * final_size;
 						var source_index = Math.floor(i / scale) + Math.floor(j / scale) * orig_dim;
 						sprites[sprite_id][frame_index].image_data.data[4 * dest_index] = data[source_index] > 0 ? r : 0;
