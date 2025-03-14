@@ -5,6 +5,7 @@ GAMEPLAY TODOs:
 - verify that falling blocks don't match as they fall. I thought I fixed this but maybe not?
 - try to not have the new row cause matches.
 - timing for falling - do we want a delay?
+- you can swap out and back really quickly once, we should avoid this I think.
 
 */
 
@@ -158,9 +159,16 @@ impl Board {
     pub fn swap_cells(&mut self, x0: usize, y0: usize, x1: usize, y1: usize) {
         let base_y0 = (self.bottom + y0) % NUM_ROWS;
         let base_y1 = (self.bottom + y1) % NUM_ROWS;
-        let tmp = self.cells[base_y0 * NUM_COLS + x0];
+
+        let c1 = self.cells[base_y0 * NUM_COLS + x0];
+        let c2 = self.cells[base_y1 * NUM_COLS + x1];
+
+        if c1.get_fall_offset() != 0. || c2.get_fall_offset() != 0. {
+            return;
+        }
+
         self.cells[base_y0 * NUM_COLS + x0] = self.cells[base_y1 * NUM_COLS + x1];
-        self.cells[base_y1 * NUM_COLS + x1] = tmp;
+        self.cells[base_y1 * NUM_COLS + x1] = c1;
     }
 
     fn check_matches(&mut self) {
