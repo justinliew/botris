@@ -52,12 +52,15 @@ pub enum GameEvent {
 
 type FallOffset = f64;
 type DeleteCountdown = f64;
+type DeathAnimFuture = f64;
+type DeathAnimCountdown = f64;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Cell {
     Empty,
     Single(u32, Option<FallOffset>),
     QueuedDelete(u32, FallOffset, DeleteCountdown),
+    DeathAnim(u32, FallOffset, DeathAnimFuture, DeathAnimCountdown),
     _Block(u32, usize, usize), // TODO figure out how to represent this
 }
 
@@ -71,6 +74,7 @@ impl Cell {
             Cell::Empty => 0,
             Cell::Single(v, _) => *v,
             Cell::QueuedDelete(v, _, _) => *v,
+            Cell::DeathAnim(v, _, _, _) => *v,
             Cell::_Block(v, _, _) => *v,
         }
     }
@@ -85,6 +89,7 @@ impl Cell {
                 }
             }
             Cell::QueuedDelete(_, o, _) => *o,
+            Cell::DeathAnim(_, o, _, _) => *o,
             _ => 0.,
         }
     }
@@ -212,26 +217,51 @@ impl Board {
     }
 
     fn check_queued_deletes(&mut self, dt: f64) {
+        let mut count = 1;
         for x in 0..NUM_COLS {
             for y in 0..NUM_ROWS {
                 let c = self.get_cell_mut(x, y);
-                if let Cell::QueuedDelete(_, _, countdown) = c {
+                if let Cell::QueuedDelete(v, o, countdown) = c {
                     if *countdown > 0. {
                         *countdown -= dt;
                     }
                     if *countdown <= 0. {
-                        *c = Cell::Empty;
+                        *c = Cell::DeathAnim(*v, *o, 0.2 * count as f64, 0.); // TODO tuning var
+                        count += 1;
                     }
                 }
             }
         }
     }
 
+    fn check_death_anims(&mut self, dt: f64) {
+        for x in 0..NUM_COLS {
+            for y in 0..NUM_ROWS {
+                let c = self.get_cell_mut(x, y);
+                if let Cell::DeathAnim(_, _, b,a) = c {
+                    if *b > 0. {
+                        *b -= dt;
+                    }
+                    if *b < 0. {
+                        *b = 0.;
+                        *a = 0.2;
+                    }
+                    if *a > 0. {
+                        *a -= dt;
+                        if *a <= 0. {
+                            *c = Cell::Empty;
+                        }
+                    }
+                }
+            }
+        }        
+    }
+
     fn delete_block(&mut self, x: usize, y: usize) {
         let cell = self.get_cell_mut(x, y);
         let val = cell.get_val();
         let offset = cell.get_fall_offset();
-        *cell = Cell::QueuedDelete(val, offset, 0.33);
+        *cell = Cell::QueuedDelete(val, offset, 0.33); // TODO tuning var
     }
 
     fn do_gravity(&mut self, dt: f64) {
@@ -294,6 +324,7 @@ impl Board {
     pub fn update(&mut self, dt: f64, boost: bool) {
         self.check_matches();
         self.check_queued_deletes(dt);
+        self.check_death_anims(dt);
         if self.delta >= 1. {
             self.delta = 0.;
             self.push_bottom_row_up();
