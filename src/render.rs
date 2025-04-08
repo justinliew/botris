@@ -7,6 +7,7 @@ use std::sync::mpsc::{Receiver, Sender};
 extern "C" {
     fn clear_screen();
     fn draw_intro();
+    fn draw_borders(_: c_uint, _: c_uint, _: c_uint, _: c_uint);
     fn draw_block(_: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
     fn draw_cursor_blocks(_: c_uint, _: c_uint, _: c_uint, _: c_uint);
     fn draw_name_picker(_: c_int, _: c_int);
@@ -145,6 +146,9 @@ impl RenderData {
 
     pub unsafe fn draw(&self, game_state: GameState, game: &Game, _dt: f64) {
         clear_screen();
+
+        let dim = self.screen_height / 12;
+        unsafe {draw_borders(dim,dim,dim*(NUM_COLS+1) as u32,dim*NUM_ROWS as u32)};
 
         match game_state {
             GameState::Intro(_) => {

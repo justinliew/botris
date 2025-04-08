@@ -432,6 +432,18 @@ const buttonTemplate = `
 				}
 			}
 
+			function draw_borders(x,y,width,height) {
+				ctx.strokeStyle = "blue";
+				ctx.lineWidth = 5;
+				ctx.beginPath();
+				ctx.moveTo(x-10,y-10);
+				ctx.lineTo(width+10, y-10);
+				ctx.lineTo(width+10, height+10);
+				ctx.lineTo(x-10, height+10);
+				ctx.lineTo(x-10,y-10);
+				ctx.stroke();
+			}
+
             function draw_block(id, x, y, width, height) {
                 if (id == 0) {
                     ctx.fillStyle = "darkred";
@@ -574,7 +586,7 @@ const buttonTemplate = `
 			}
 
 			// The real loading and running of our wasm starts here
-			let imports = { console_log, console_log_int, console_log_uint, console_log_double, clear_screen, draw_name_picker, check_high_score, wait_outro_complete, wait_high_score, draw_intro, draw_block, draw_cursor_blocks, draw_sprite, handle_game_over, get_rand, update_local_score, new_session };
+			let imports = { console_log, console_log_int, console_log_uint, console_log_double, clear_screen, draw_name_picker, check_high_score, wait_outro_complete, wait_high_score, draw_intro, draw_block, draw_cursor_blocks, draw_borders, draw_sprite, handle_game_over, get_rand, update_local_score, new_session };
 			imports.Math_atan = Math.atan;
 			imports.sin = Math.sin;
 			imports.cos = Math.cos;
