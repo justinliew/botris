@@ -55,7 +55,7 @@ impl RenderData {
         for y in 0..NUM_ROWS {
             for x in 0..NUM_COLS {
                 match board.get_cell(x, y) {
-                    Cell::Single(id, offset) => {
+                    Cell::Single(id,offset) => {
                         let offset_v = match offset {
                             Some(v) => *v,
                             None => 0.
@@ -72,7 +72,7 @@ impl RenderData {
                             _ => unsafe { draw_sprite(*id, 0, xb, yb, 0, 0, dim, dim) },
                         };
                     }
-                    Cell::QueuedDelete(id, offset, countdown) => {
+                    Cell::QueuedDelete(id, offset, countdown,chain) => {
                         let xb = dim + x as u32 * dim;
                         let yb = (NUM_ROWS - y) as u32 * dim - delta as u32
                             + (dim as f64 * offset) as u32;

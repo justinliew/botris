@@ -55,11 +55,11 @@ type DeleteCountdown = f64;
 type DeathAnimFuture = f64;
 type DeathAnimCountdown = f64;
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Cell {
     Empty,
     Single(u32, Option<FallOffset>),
-    QueuedDelete(u32, FallOffset, DeleteCountdown),
+    QueuedDelete(u32, FallOffset, DeleteCountdown, usize),
     DeathAnim(u32, FallOffset, DeathAnimFuture, DeathAnimCountdown),
     _Block(u32, usize, usize), // TODO figure out how to represent this
 }
@@ -72,8 +72,8 @@ impl Cell {
     pub fn get_val(&self) -> u32 {
         match self {
             Cell::Empty => 0,
-            Cell::Single(v, _) => *v,
-            Cell::QueuedDelete(v, _, _) => *v,
+            Cell::Single(v,_) => *v,
+            Cell::QueuedDelete(v, _, _,_) => *v,
             Cell::DeathAnim(v, _, _, _) => *v,
             Cell::_Block(v, _, _) => *v,
         }
@@ -88,9 +88,29 @@ impl Cell {
                     0.
                 }
             }
-            Cell::QueuedDelete(_, o, _) => *o,
+            Cell::QueuedDelete(_, o, _,_) => *o,
             Cell::DeathAnim(_, o, _, _) => *o,
             _ => 0.,
+        }
+    }
+}
+
+impl PartialEq for Cell {
+    fn eq(&self, other: &Self) -> bool {
+        if !matches!(self, _other) {
+            return false;
+        }
+
+        match self {
+            Cell::Empty => false,
+            Cell::Single(v,f) => {
+                if let Cell::Single(v2,f2) = other {
+                    v == v2 && f.is_none() && f2.is_none() // we don't want to ever match falling blocks
+                } else {
+                    false
+                }
+            },
+            _ => false,
         }
     }
 }
@@ -102,6 +122,9 @@ pub struct Board {
     pub delta: f64, // scroll between 0. and 1. of a row
     // we are storing this in rows, so to get something you go x + y*NUM_COLS
     cells: [Cell; NUM_ROWS * NUM_COLS],
+    just_touched: [bool; NUM_ROWS * NUM_COLS],
+    current_chain: usize,
+    chains_valid: bool,
 
     /// user cursor
     pub user_row: usize,
@@ -114,6 +137,9 @@ impl Board {
         Board {
             delta: 0.,
             cells: [Cell::new(); NUM_COLS * NUM_ROWS],
+            just_touched: [false; NUM_COLS * NUM_ROWS],
+            current_chain: 0,
+            chains_valid: false,
             user_row: 0,
             user_col: 2,
             bottom: 0,
@@ -128,6 +154,11 @@ impl Board {
         self.new_bottom_row();
         // we don't push the last row up because otherwise we end up with a gap at the bottom
         self.user_row = level / 2;
+    }
+
+    fn end_frame(&mut self) {
+        self.chains_valid = false;
+        self.just_touched = [false; NUM_COLS * NUM_ROWS];
     }
 
     pub fn get_cell(&self, x: usize, y: usize) -> &Cell {
@@ -160,7 +191,7 @@ impl Board {
         }
     }
 
-    pub fn swap_cells(&mut self, x0: usize, y0: usize, x1: usize, y1: usize) {
+    pub fn swap_cells(&mut self, x0: usize, y0: usize, x1: usize, y1: usize, user: bool) {
         let base_y0 = (self.bottom + y0) % NUM_ROWS;
         let base_y1 = (self.bottom + y1) % NUM_ROWS;
 
@@ -173,22 +204,32 @@ impl Board {
 
         self.cells[base_y0 * NUM_COLS + x0] = self.cells[base_y1 * NUM_COLS + x1];
         self.cells[base_y1 * NUM_COLS + x1] = c1;
+
+        if user {
+            self.just_touched[base_y0 * NUM_COLS + x0] = true;
+            self.just_touched[base_y1 * NUM_COLS + x1] = true;
+        }
     }
 
     fn check_matches(&mut self) {
         let mut state = [0_u32; NUM_ROWS * NUM_COLS];
 
+        let mut made_match = None;
         for x in 0..NUM_COLS {
             for y in 0..NUM_ROWS {
                 let c = self.get_cell(x, y);
-                if let Cell::Single(_, _) = c {
+                if let Cell::Single(_,_) = c {
                     let mut xi = 0;
                     while x + xi + 1 < NUM_COLS && self.get_cell(x + xi + 1, y) == c {
                         xi += 1;
                     }
                     if xi >= 2 {
+                        made_match = Some(true);
                         for xm in 0..xi + 1 {
                             let base_y = (self.bottom + y) % NUM_ROWS;
+                            if self.just_touched[base_y * NUM_COLS + x + xm] {
+                                made_match = Some(false);
+                            }
                             state[base_y * NUM_COLS + x + xm] = 1;
                         }
                     }
@@ -197,8 +238,14 @@ impl Board {
                         yi += 1;
                     }
                     if yi >= 2 {
+                        if made_match.is_none() {
+                            made_match = Some(true);
+                        }
                         for ym in 0..yi + 1 {
                             let base_y = (self.bottom + y + ym) % NUM_ROWS;
+                            if self.just_touched[base_y * NUM_COLS + x] {
+                                made_match = Some(false);
+                            }
                             state[base_y * NUM_COLS + x] = 1;
                         }
                     }
@@ -206,11 +253,23 @@ impl Board {
             }
         }
 
+        if made_match.is_some() {
+            if made_match.unwrap() == true {
+                if self.chains_valid {
+                    self.current_chain += 1;
+                } else {
+                    self.current_chain = 1;
+                }
+            } else {
+                self.current_chain = 1;
+            }
+        }
+
         for x in 0..NUM_COLS {
             for y in 0..NUM_ROWS {
                 let base_y = (self.bottom + y) % NUM_ROWS;
                 if state[base_y * NUM_COLS + x] == 1 {
-                    self.delete_block(x, y);
+                    self.delete_block(x, y, self.current_chain);
                 }
             }
         }
@@ -218,11 +277,13 @@ impl Board {
 
     fn check_queued_deletes(&mut self, dt: f64) {
         let mut count = 1;
+        let mut chains_valid = false;
         for x in 0..NUM_COLS {
             for y in 0..NUM_ROWS {
                 let c = self.get_cell_mut(x, y);
-                if let Cell::QueuedDelete(v, o, countdown) = c {
+                if let Cell::QueuedDelete(v, o, countdown,_) = c {
                     if *countdown > 0. {
+                        chains_valid = true;
                         *countdown -= dt;
                     }
                     if *countdown <= 0. {
@@ -232,14 +293,19 @@ impl Board {
                 }
             }
         }
+        if chains_valid {
+            self.chains_valid = true;
+        }
     }
 
     fn check_death_anims(&mut self, dt: f64) {
+        let mut chains_valid = false;
         for x in 0..NUM_COLS {
             for y in 0..NUM_ROWS {
                 let c = self.get_cell_mut(x, y);
                 if let Cell::DeathAnim(_, _, b,a) = c {
                     if *b > 0. {
+                        chains_valid = true;
                         *b -= dt;
                     }
                     if *b < 0. {
@@ -247,6 +313,7 @@ impl Board {
                         *a = 0.2;
                     }
                     if *a > 0. {
+                        chains_valid = true;
                         *a -= dt;
                         if *a <= 0. {
                             *c = Cell::Empty;
@@ -255,19 +322,23 @@ impl Board {
                 }
             }
         }        
+        if chains_valid {
+            self.chains_valid = true;
+        }
     }
 
-    fn delete_block(&mut self, x: usize, y: usize) {
+    fn delete_block(&mut self, x: usize, y: usize, chain: usize) {
         let cell = self.get_cell_mut(x, y);
         let val = cell.get_val();
         let offset = cell.get_fall_offset();
-        *cell = Cell::QueuedDelete(val, offset, 0.33); // TODO tuning var
+        *cell = Cell::QueuedDelete(val, offset, 0.33, chain); // TODO tuning var
     }
 
     fn do_gravity(&mut self, dt: f64) {
         for y in 1..NUM_ROWS {
             for x in 0..NUM_COLS {
                 if self.below_is_empty(x, y) {
+                    self.chains_valid = true;
                     let cell = self.get_cell_mut(x, y);
                     let mut swap = false;
                     if let Cell::Single(_v, o) = cell {
@@ -283,11 +354,11 @@ impl Board {
                         *o = Some(next_o);
                     }
                     if swap {
-                        self.swap_cells(x, y, x, y - 1);
+                        self.swap_cells(x, y, x, y - 1, false);
                     }
                 } else {
                     let cell = self.get_cell_mut(x, y);
-                    if let Cell::Single(_v, o) = cell {
+                    if let Cell::Single(_,o) = cell {
                         *o = None;
                     }
                 }
@@ -301,6 +372,7 @@ impl Board {
             self.user_row,
             self.user_col + 1,
             self.user_row,
+            true,
         );
     }
 
@@ -322,7 +394,6 @@ impl Board {
     }
 
     pub fn update(&mut self, dt: f64, boost: bool) {
-        self.check_matches();
         self.check_queued_deletes(dt);
         self.check_death_anims(dt);
         if self.delta >= 1. {
@@ -337,6 +408,8 @@ impl Board {
             self.delta += dt / 16.;
         }
         self.do_gravity(dt);
+        self.check_matches();
+        self.end_frame();
     }
 }
 
