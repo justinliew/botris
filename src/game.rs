@@ -307,20 +307,21 @@ impl Board {
             for y in 0..NUM_ROWS {
                 let c = self.get_cell_mut(x, y);
                 if let Cell::DeathAnim(_, _, b,a) = c {
-                    if *b > 0. {
-                        chains_valid = true;
-                        *b -= dt;
-                    }
-                    if *b < 0. {
-                        *b = 0.;
-                        *a = 0.1;
-                    }
                     if *a > 0. {
                         chains_valid = true;
                         *a -= dt;
                         if *a <= 0. {
                             *c = Cell::Empty;
                         }
+                    } else {
+                        if *b > 0. {
+                            chains_valid = true;
+                            *b -= dt;
+                        }
+                        if *b <= 0. {
+                            *b = 0.;
+                            *a = 0.1;
+                        }    
                     }
                 }
             }
