@@ -59,7 +59,7 @@ type DeathAnimCountdown = f64;
 pub enum Cell {
     Empty,
     Single(u32, Option<FallOffset>),
-    QueuedDelete(u32, FallOffset, DeleteCountdown, usize),
+    QueuedDelete(u32, u32, FallOffset, DeleteCountdown, usize),
     DeathAnim(u32, FallOffset, DeathAnimFuture, DeathAnimCountdown),
     _Block(u32, usize, usize), // TODO figure out how to represent this
 }
@@ -73,7 +73,7 @@ impl Cell {
         match self {
             Cell::Empty => 0,
             Cell::Single(v,_) => *v,
-            Cell::QueuedDelete(v, _, _,_) => *v,
+            Cell::QueuedDelete(v, _, _, _,_) => *v,
             Cell::DeathAnim(v, _, _, _) => *v,
             Cell::_Block(v, _, _) => *v,
         }
@@ -88,7 +88,7 @@ impl Cell {
                     0.
                 }
             }
-            Cell::QueuedDelete(_, o, _,_) => *o,
+            Cell::QueuedDelete(_, _, o,_,_) => *o,
             Cell::DeathAnim(_, o, _, _) => *o,
             _ => 0.,
         }
@@ -215,6 +215,7 @@ impl Board {
         let mut state = [0_u32; NUM_ROWS * NUM_COLS];
 
         let mut made_match = None;
+        let mut match_idx = 1;
         for x in 0..NUM_COLS {
             for y in 0..NUM_ROWS {
                 let c = self.get_cell(x, y);
@@ -230,8 +231,9 @@ impl Board {
                             if self.just_touched[base_y * NUM_COLS + x + xm] {
                                 made_match = Some(false);
                             }
-                            state[base_y * NUM_COLS + x + xm] = 1;
+                            state[base_y * NUM_COLS + x + xm] = match_idx;
                         }
+                        match_idx += 1;
                     }
                     let mut yi = 0;
                     while y + yi + 1 < NUM_ROWS - 1 && self.get_cell(x, y + yi + 1) == c {
@@ -246,8 +248,9 @@ impl Board {
                             if self.just_touched[base_y * NUM_COLS + x] {
                                 made_match = Some(false);
                             }
-                            state[base_y * NUM_COLS + x] = 1;
+                            state[base_y * NUM_COLS + x] = match_idx;
                         }
+                        match_idx += 1;
                     }
                 }
             }
@@ -268,8 +271,8 @@ impl Board {
         for x in 0..NUM_COLS {
             for y in 0..NUM_ROWS {
                 let base_y = (self.bottom + y) % NUM_ROWS;
-                if state[base_y * NUM_COLS + x] == 1 {
-                    self.delete_block(x, y, self.current_chain);
+                if state[base_y * NUM_COLS + x] > 0 {
+                    self.delete_block(x, y, state[base_y * NUM_COLS + x], self.current_chain);
                 }
             }
         }
@@ -281,13 +284,13 @@ impl Board {
         for x in 0..NUM_COLS {
             for y in 0..NUM_ROWS {
                 let c = self.get_cell_mut(x, y);
-                if let Cell::QueuedDelete(v, o, countdown,_) = c {
+                if let Cell::QueuedDelete(v, _, o, countdown,_) = c {
                     if *countdown > 0. {
                         chains_valid = true;
                         *countdown -= dt;
                     }
                     if *countdown <= 0. {
-                        *c = Cell::DeathAnim(*v, *o, 0.2 * count as f64, 0.); // TODO tuning var
+                        *c = Cell::DeathAnim(*v, *o, 0.1 * count as f64, 0.); // TODO tuning var
                         count += 1;
                     }
                 }
@@ -310,7 +313,7 @@ impl Board {
                     }
                     if *b < 0. {
                         *b = 0.;
-                        *a = 0.2;
+                        *a = 0.1;
                     }
                     if *a > 0. {
                         chains_valid = true;
@@ -327,11 +330,11 @@ impl Board {
         }
     }
 
-    fn delete_block(&mut self, x: usize, y: usize, chain: usize) {
+    fn delete_block(&mut self, x: usize, y: usize, idx: u32, chain: usize) {
         let cell = self.get_cell_mut(x, y);
         let val = cell.get_val();
         let offset = cell.get_fall_offset();
-        *cell = Cell::QueuedDelete(val, offset, 0.33, chain); // TODO tuning var
+        *cell = Cell::QueuedDelete(val, idx, offset, 0.5, chain); // TODO tuning var
     }
 
     fn do_gravity(&mut self, dt: f64) {

@@ -1,5 +1,6 @@
 use crate::game::*;
 use crate::log::*;
+use std::collections::HashMap;
 use std::ffi::{c_int, c_uint};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
@@ -9,12 +10,22 @@ extern "C" {
     fn draw_intro();
     fn draw_borders(_: c_uint, _: c_uint, _: c_uint, _: c_uint);
     fn draw_block(_: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
+    fn draw_multiplier(_: c_uint, _: c_uint, _: c_uint);
     fn draw_cursor_blocks(_: c_uint, _: c_uint, _: c_uint, _: c_uint);
     fn draw_name_picker(_: c_int, _: c_int);
     fn _update_local_score(_: c_int);
 
     // sprite id, frame index, x, y
-    fn draw_sprite(_: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
+    fn draw_sprite(
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+    );
 }
 
 pub struct RenderData {
@@ -22,6 +33,12 @@ pub struct RenderData {
     screen_height: u32,
     _receiver: Receiver<GameEvent>,
     pub sender: Sender<GameEvent>,
+}
+
+struct Multiplier {
+    x: u32,
+    y: u32,
+    value: usize,
 }
 
 impl RenderData {
@@ -49,17 +66,19 @@ impl RenderData {
     }
 
     pub fn draw_board(&self, board: &Board) {
-       let dim = self.screen_height / 12;
+        let dim = self.screen_height / 12;
         let delta = board.delta * dim as f64;
         const NUM_ROWS_MIN_1: usize = NUM_ROWS - 1;
+
+        let mut multipliers = HashMap::new();
 
         for y in 0..NUM_ROWS {
             for x in 0..NUM_COLS {
                 match board.get_cell(x, y) {
-                    Cell::Single(id,offset) => {
+                    Cell::Single(id, offset) => {
                         let offset_v = match offset {
                             Some(v) => *v,
-                            None => 0.
+                            None => 0.,
                         };
                         let xb = dim + x as u32 * dim;
                         let yb = (NUM_ROWS - y) as u32 * dim - delta as u32
@@ -68,26 +87,44 @@ impl RenderData {
                         match y {
                             0 => unsafe { draw_sprite(*id, 0, xb, yb, 0, 0, dim, delta as u32) },
                             NUM_ROWS_MIN_1 => unsafe {
-                                draw_sprite(*id, 0, xb, yb, 0, delta as u32, dim, dim - delta as u32)
+                                draw_sprite(
+                                    *id,
+                                    0,
+                                    xb,
+                                    yb,
+                                    0,
+                                    delta as u32,
+                                    dim,
+                                    dim - delta as u32,
+                                )
                             },
                             _ => unsafe { draw_sprite(*id, 0, xb, yb, 0, 0, dim, dim) },
                         };
                     }
-                    Cell::QueuedDelete(id, offset, countdown,chain) => {
+                    Cell::QueuedDelete(val, id, offset, countdown, chain) => {
                         let xb = dim + x as u32 * dim;
                         let yb = (NUM_ROWS - y) as u32 * dim - delta as u32
                             + (dim as f64 * offset) as u32;
 
                         match y {
                             0 => {
-                                unsafe { draw_sprite(*id, 0, xb, yb, 0, 0, dim, delta as u32) };
+                                unsafe { draw_sprite(*val, 0, xb, yb, 0, 0, dim, delta as u32) };
                                 if (countdown * 100.) as u32 % 2 == 0 {
-                                    unsafe { draw_block(99 ,xb, yb, dim, delta as u32) };
+                                    unsafe { draw_block(99, xb, yb, dim, delta as u32) };
                                 }
                             }
                             NUM_ROWS_MIN_1 => {
                                 unsafe {
-                                    draw_sprite(*id, 0 ,xb, yb + delta as u32, 0, delta as u32, dim, dim - delta as u32)
+                                    draw_sprite(
+                                        *val,
+                                        0,
+                                        xb,
+                                        yb + delta as u32,
+                                        0,
+                                        delta as u32,
+                                        dim,
+                                        dim - delta as u32,
+                                    )
                                 };
                                 if (countdown * 100.) as u32 % 2 == 0 {
                                     unsafe {
@@ -102,13 +139,25 @@ impl RenderData {
                                 }
                             }
                             _ => {
-                                unsafe { draw_sprite(*id, 0, xb, yb, 0, 0, dim, dim) };
+                                unsafe { draw_sprite(*val, 0, xb, yb, 0, 0, dim, dim) };
                                 if (countdown * 100.) as u32 % 2 == 0 {
                                     unsafe { draw_block(99, xb, yb, dim, dim) };
                                 }
                             }
                         };
-                    },
+                        if *chain > 1 {
+                            if !multipliers.contains_key(id) {
+                                multipliers.insert(
+                                    id,
+                                    Multiplier {
+                                        x: xb,
+                                        y: yb,
+                                        value: *chain,
+                                    },
+                                );
+                            }
+                        }
+                    }
                     Cell::DeathAnim(id, offset, _, _) => {
                         let xb = dim + x as u32 * dim;
                         let yb = (NUM_ROWS - y) as u32 * dim - delta as u32
@@ -117,7 +166,16 @@ impl RenderData {
                         match y {
                             0 => unsafe { draw_sprite(*id, 0, xb, yb, 0, 0, dim, delta as u32) },
                             NUM_ROWS_MIN_1 => unsafe {
-                                draw_sprite(*id, 0, xb, yb, 0, delta as u32, dim, dim - delta as u32)
+                                draw_sprite(
+                                    *id,
+                                    0,
+                                    xb,
+                                    yb,
+                                    0,
+                                    delta as u32,
+                                    dim,
+                                    dim - delta as u32,
+                                )
                             },
                             _ => unsafe { draw_sprite(*id, 0, xb, yb, 0, 0, dim, dim) },
                         };
@@ -125,6 +183,10 @@ impl RenderData {
                     _ => {}
                 }
             }
+        }
+
+        for (_, m) in &multipliers {
+            unsafe { draw_multiplier(m.x, m.y, m.value as u32) };
         }
     }
 
@@ -148,7 +210,7 @@ impl RenderData {
         clear_screen();
 
         let dim = self.screen_height / 12;
-        unsafe {draw_borders(dim,dim,dim*(NUM_COLS+1) as u32,dim*NUM_ROWS as u32)};
+        unsafe { draw_borders(dim, dim, dim * (NUM_COLS + 1) as u32, dim * NUM_ROWS as u32) };
 
         match game_state {
             GameState::Intro(_) => {
