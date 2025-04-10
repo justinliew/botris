@@ -55,11 +55,45 @@ type DeleteCountdown = f64;
 type DeathAnimFuture = f64;
 type DeathAnimCountdown = f64;
 
+#[derive(Debug,Default,Copy,Clone)]
+pub struct Chain {
+    value: Option<usize>,
+    countdown: f64, 
+}
+
+impl Chain {
+    pub fn inc(&mut self) {
+        *self.value.get_or_insert(1) += 1;
+        self.countdown = 5.;
+    }
+
+    pub fn clear(&mut self) {
+        self.value = None;
+        self.countdown = 0.;
+    }
+
+    pub fn get_value(&self) -> Option<usize> {
+        self.value
+    }
+
+    pub fn update(&mut self, dt: f64) -> Option<usize> {
+        if self.countdown > 0. {
+            self.countdown -= dt;
+            if self.countdown <= 0. {
+                let v = self.value;
+                self.value = None;
+                return v;
+            }
+        }
+        None
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub enum Cell {
     Empty,
     Single(u32, Option<FallOffset>),
-    QueuedDelete(u32, u32, FallOffset, DeleteCountdown, usize),
+    QueuedDelete(u32, u32, FallOffset, DeleteCountdown, Chain),
     DeathAnim(u32, FallOffset, DeathAnimFuture, DeathAnimCountdown),
     _Block(u32, usize, usize), // TODO figure out how to represent this
 }
@@ -123,7 +157,7 @@ pub struct Board {
     // we are storing this in rows, so to get something you go x + y*NUM_COLS
     cells: [Cell; NUM_ROWS * NUM_COLS],
     just_touched: [bool; NUM_ROWS * NUM_COLS],
-    current_chain: usize,
+    pub chain: Chain,
     chains_valid: bool,
 
     /// user cursor
@@ -138,7 +172,7 @@ impl Board {
             delta: 0.,
             cells: [Cell::new(); NUM_COLS * NUM_ROWS],
             just_touched: [false; NUM_COLS * NUM_ROWS],
-            current_chain: 0,
+            chain: Default::default(),
             chains_valid: false,
             user_row: 0,
             user_col: 2,
@@ -259,12 +293,12 @@ impl Board {
         if made_match.is_some() {
             if made_match.unwrap() == true {
                 if self.chains_valid {
-                    self.current_chain += 1;
+                    self.chain.inc();
                 } else {
-                    self.current_chain = 1;
+                    self.chain.clear();
                 }
             } else {
-                self.current_chain = 1;
+                self.chain.clear();
             }
         }
 
@@ -272,7 +306,7 @@ impl Board {
             for y in 0..NUM_ROWS {
                 let base_y = (self.bottom + y) % NUM_ROWS;
                 if state[base_y * NUM_COLS + x] > 0 {
-                    self.delete_block(x, y, state[base_y * NUM_COLS + x], self.current_chain);
+                    self.delete_block(x, y, state[base_y * NUM_COLS + x], self.chain);
                 }
             }
         }
@@ -331,7 +365,7 @@ impl Board {
         }
     }
 
-    fn delete_block(&mut self, x: usize, y: usize, idx: u32, chain: usize) {
+    fn delete_block(&mut self, x: usize, y: usize, idx: u32, chain: Chain) {
         let cell = self.get_cell_mut(x, y);
         let val = cell.get_val();
         let offset = cell.get_fall_offset();
@@ -414,6 +448,10 @@ impl Board {
         self.do_gravity(dt);
         self.check_matches();
         self.end_frame();
+        let c = self.chain.update(dt);
+        if c.is_some() {
+            // 
+        }
     }
 }
 

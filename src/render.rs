@@ -13,6 +13,7 @@ extern "C" {
     fn draw_multiplier(_: c_uint, _: c_uint, _: c_uint);
     fn draw_cursor_blocks(_: c_uint, _: c_uint, _: c_uint, _: c_uint);
     fn draw_name_picker(_: c_int, _: c_int);
+    fn draw_multiplier_ui(_: c_uint);
     fn _update_local_score(_: c_int);
 
     // sprite id, frame index, x, y
@@ -145,14 +146,15 @@ impl RenderData {
                                 }
                             }
                         };
-                        if *chain > 1 {
+                        let c = chain.get_value();
+                        if c.is_some() {
                             if !multipliers.contains_key(id) {
                                 multipliers.insert(
                                     id,
                                     Multiplier {
                                         x: xb,
                                         y: yb,
-                                        value: *chain,
+                                        value: c.unwrap(),
                                     },
                                 );
                             }
@@ -206,6 +208,13 @@ impl RenderData {
         };
     }
 
+    pub fn draw_ui(&self, board: &Board) {
+        let c = board.chain.get_value();
+        if c.is_some() {
+            unsafe {draw_multiplier_ui(c.unwrap() as u32)};
+        }
+    }
+
     pub unsafe fn draw(&self, game_state: GameState, game: &Game, _dt: f64) {
         clear_screen();
 
@@ -219,6 +228,7 @@ impl RenderData {
             GameState::Playing => {
                 self.draw_board(&game.board);
                 self.draw_cursor(&game.board);
+                self.draw_ui(&game.board);
             }
             GameState::_Death(_) => {}
             GameState::CheckHighScore => {}
