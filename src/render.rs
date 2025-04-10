@@ -1,5 +1,8 @@
+use crate::board::*;
+use crate::cell::*;
 use crate::game::*;
 use crate::log::*;
+
 use std::collections::HashMap;
 use std::ffi::{c_int, c_uint};
 use std::sync::mpsc;
@@ -211,7 +214,7 @@ impl RenderData {
     pub fn draw_ui(&self, board: &Board) {
         let c = board.chain.get_value();
         if c.is_some() {
-            unsafe {draw_multiplier_ui(c.unwrap() as u32)};
+            unsafe { draw_multiplier_ui(c.unwrap() as u32) };
         }
     }
 

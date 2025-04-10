@@ -2,6 +2,9 @@ use std::ffi::{c_char, c_double, c_int, c_uint, CString};
 use std::sync::Mutex;
 
 mod game;
+mod board;
+mod cell;
+mod chain;
 mod input;
 mod log;
 mod render;
