@@ -1,8 +1,7 @@
-
-#[derive(Debug,Default,Copy,Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct Chain {
     value: Option<usize>,
-    countdown: f64, 
+    countdown: f64,
 }
 
 impl Chain {

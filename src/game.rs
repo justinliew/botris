@@ -8,9 +8,9 @@ GAMEPLAY TODOs:
 
 */
 
+use crate::board::*;
 use crate::input::Input;
 use crate::log::*;
-use crate::board::*;
 use std::os::raw::{c_int, c_uint};
 use std::sync::mpsc::Sender;
 
@@ -49,12 +49,10 @@ pub enum GameEvent {
     // 	ScoreChanged(i32),
 }
 
-
 /// The data structure that contains the state of the game
 pub struct Game {
     pub board: Board,
-    /// The current score of the player
-    pub _score: i32,
+    pub enemy: Enemy,
     /// state of the game
     pub game_state: GameState,
 

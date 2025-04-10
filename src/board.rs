@@ -110,7 +110,7 @@ impl Board {
         for x in 0..NUM_COLS {
             for y in 0..NUM_ROWS {
                 let c = self.get_cell(x, y);
-                if let Cell::Single(_,_) = c {
+                if let Cell::Single(_, _) = c {
                     let mut xi = 0;
                     while x + xi + 1 < NUM_COLS && self.get_cell(x + xi + 1, y) == c {
                         xi += 1;
@@ -175,7 +175,7 @@ impl Board {
         for x in 0..NUM_COLS {
             for y in 0..NUM_ROWS {
                 let c = self.get_cell_mut(x, y);
-                if let Cell::QueuedDelete(v, _, o, countdown,_) = c {
+                if let Cell::QueuedDelete(v, _, o, countdown, _) = c {
                     if *countdown > 0. {
                         chains_valid = true;
                         *countdown -= dt;
@@ -197,7 +197,7 @@ impl Board {
         for x in 0..NUM_COLS {
             for y in 0..NUM_ROWS {
                 let c = self.get_cell_mut(x, y);
-                if let Cell::DeathAnim(_, _, b,a) = c {
+                if let Cell::DeathAnim(_, _, b, a) = c {
                     if *a > 0. {
                         chains_valid = true;
                         *a -= dt;
@@ -212,11 +212,11 @@ impl Board {
                         if *b <= 0. {
                             *b = 0.;
                             *a = 0.1;
-                        }    
+                        }
                     }
                 }
             }
-        }        
+        }
         if chains_valid {
             self.chains_valid = true;
         }
@@ -253,7 +253,7 @@ impl Board {
                     }
                 } else {
                     let cell = self.get_cell_mut(x, y);
-                    if let Cell::Single(_,o) = cell {
+                    if let Cell::Single(_, o) = cell {
                         *o = None;
                     }
                 }
@@ -307,7 +307,7 @@ impl Board {
         self.end_frame();
         let c = self.chain.update(dt);
         if c.is_some() {
-            // 
+            //
         }
     }
 }

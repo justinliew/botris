@@ -22,8 +22,8 @@ impl Cell {
     pub fn get_val(&self) -> u32 {
         match self {
             Cell::Empty => 0,
-            Cell::Single(v,_) => *v,
-            Cell::QueuedDelete(v, _, _, _,_) => *v,
+            Cell::Single(v, _) => *v,
+            Cell::QueuedDelete(v, _, _, _, _) => *v,
             Cell::DeathAnim(v, _, _, _) => *v,
             Cell::_Block(v, _, _) => *v,
         }
@@ -38,7 +38,7 @@ impl Cell {
                     0.
                 }
             }
-            Cell::QueuedDelete(_, _, o,_,_) => *o,
+            Cell::QueuedDelete(_, _, o, _, _) => *o,
             Cell::DeathAnim(_, o, _, _) => *o,
             _ => 0.,
         }
@@ -53,13 +53,13 @@ impl PartialEq for Cell {
 
         match self {
             Cell::Empty => false,
-            Cell::Single(v,f) => {
-                if let Cell::Single(v2,f2) = other {
+            Cell::Single(v, f) => {
+                if let Cell::Single(v2, f2) = other {
                     v == v2 && f.is_none() && f2.is_none() // we don't want to ever match falling blocks
                 } else {
                     false
                 }
-            },
+            }
             _ => false,
         }
     }
