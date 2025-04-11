@@ -1,6 +1,7 @@
 use crate::cell::*;
 use crate::chain::*;
 use std::ffi::c_uint;
+use crate::log::*;
 
 pub const NUM_ROWS: usize = 12;
 pub const NUM_COLS: usize = 6;
@@ -288,7 +289,7 @@ impl Board {
         *self.get_cell_mut(5, 0) = Cell::Single(unsafe { get_rand(6) }, None);
     }
 
-    pub fn update(&mut self, dt: f64, boost: bool) {
+    pub fn update(&mut self, dt: f64, boost: bool) -> Option<u32> {
         self.check_queued_deletes(dt);
         self.check_death_anims(dt);
         if self.delta >= 1. {
@@ -307,7 +308,14 @@ impl Board {
         self.end_frame();
         let c = self.chain.update(dt);
         if c.is_some() {
-            //
+            return Some(c.unwrap());
         }
+        return None;
     }
+
+    pub fn attack(&mut self) {
+        // TODO
+        log("ATTACKING THE PLAYER");
+    }
+
 }

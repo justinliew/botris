@@ -9,6 +9,7 @@ GAMEPLAY TODOs:
 */
 
 use crate::board::*;
+use crate::enemy::*;
 use crate::input::Input;
 use crate::log::*;
 use std::os::raw::{c_int, c_uint};
@@ -76,7 +77,7 @@ impl Game {
     pub fn new(tx: Sender<GameEvent>) -> Game {
         Game {
             board: Board::new(),
-            _score: 0,
+            enemy: Enemy::new(),
             game_state: GameState::Intro(0.5),
             last_left: (false, 0.),
             last_right: (false, 0.),
@@ -181,7 +182,12 @@ impl Game {
             }
             GameState::Playing => {
                 self.handle_input(dt, input);
-                self.board.update(dt, self.boost);
+                if let Some(a) = self.board.update(dt, self.boost) {
+                    self.enemy.attack(a);
+                }
+                if self.enemy.update(dt) {
+                    self.board.attack();
+                }
             }
             GameState::_Death(ref mut timer) => {
                 *timer -= dt;

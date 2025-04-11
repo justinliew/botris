@@ -1,6 +1,7 @@
 use crate::board::*;
 use crate::cell::*;
 use crate::game::*;
+use crate::enemy::*;
 use crate::log::*;
 
 use std::collections::HashMap;
@@ -17,6 +18,7 @@ extern "C" {
     fn draw_cursor_blocks(_: c_uint, _: c_uint, _: c_uint, _: c_uint);
     fn draw_name_picker(_: c_int, _: c_int);
     fn draw_multiplier_ui(_: c_uint);
+    fn draw_enemy_ui(_: c_uint);
     fn _update_local_score(_: c_int);
 
     // sprite id, frame index, x, y
@@ -42,7 +44,7 @@ pub struct RenderData {
 struct Multiplier {
     x: u32,
     y: u32,
-    value: usize,
+    value: u32,
 }
 
 impl RenderData {
@@ -211,7 +213,8 @@ impl RenderData {
         };
     }
 
-    pub fn draw_ui(&self, board: &Board) {
+    pub fn draw_ui(&self, board: &Board, enemy: &Enemy) {
+        unsafe {draw_enemy_ui(enemy.countdown as u32)};
         let c = board.chain.get_value();
         if c.is_some() {
             unsafe { draw_multiplier_ui(c.unwrap() as u32) };
@@ -231,7 +234,7 @@ impl RenderData {
             GameState::Playing => {
                 self.draw_board(&game.board);
                 self.draw_cursor(&game.board);
-                self.draw_ui(&game.board);
+                self.draw_ui(&game.board,&game.enemy);
             }
             GameState::_Death(_) => {}
             GameState::CheckHighScore => {}

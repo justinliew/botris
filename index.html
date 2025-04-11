@@ -466,17 +466,23 @@ const buttonTemplate = `
             }
 
 			function draw_multiplier(x, y, value) {
-				ctx.fillStyle = "red";
+				ctx.fillStyle = "green";
 				ctx.font = "100px courier";
 				let text = "x" + value;
 				ctx.fillText(text, x,y);
 			}
 
 			function draw_multiplier_ui(value) {
-				ctx.fillStyle = "red";
+				ctx.fillStyle = "green";
 				ctx.font = "100px courier";
 				let text = "x" + value;
 				ctx.fillText(text, 800,200);
+			}
+
+			function draw_enemy_ui(value) {
+				ctx.fillStyle = "red";
+				ctx.font = "50px courier";
+				ctx.fillText(value, 800,300);
 			}
 
 			function check_high_score() {
@@ -600,7 +606,7 @@ const buttonTemplate = `
 			}
 
 			// The real loading and running of our wasm starts here
-			let imports = { console_log, console_log_int, console_log_uint, console_log_double, clear_screen, draw_name_picker, check_high_score, wait_outro_complete, wait_high_score, draw_intro, draw_block, draw_multiplier, draw_multiplier_ui, draw_cursor_blocks, draw_borders, draw_sprite, handle_game_over, get_rand, update_local_score, new_session };
+			let imports = { console_log, console_log_int, console_log_uint, console_log_double, clear_screen, draw_name_picker, check_high_score, wait_outro_complete, wait_high_score, draw_intro, draw_block, draw_multiplier, draw_multiplier_ui, draw_enemy_ui, draw_cursor_blocks, draw_borders, draw_sprite, handle_game_over, get_rand, update_local_score, new_session };
 			imports.Math_atan = Math.atan;
 			imports.sin = Math.sin;
 			imports.cos = Math.cos;
