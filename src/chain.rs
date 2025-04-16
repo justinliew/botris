@@ -5,6 +5,11 @@ pub struct Chain {
 }
 
 impl Chain {
+
+    pub fn empty() -> Self {
+        Chain{ value: None, countdown: 0.}
+    }
+
     pub fn inc(&mut self) {
         *self.value.get_or_insert(1) += 1;
         self.countdown = 5.;

@@ -2,10 +2,12 @@ use crate::cell::*;
 use crate::chain::*;
 use std::ffi::c_uint;
 use crate::log::*;
-use std::collections::HashMap;
+use std::collections::{HashMap,HashSet};
 
 pub const NUM_ROWS: usize = 12;
 pub const NUM_COLS: usize = 6;
+
+const START_GARBAGE_ID : u32 = 1000;
 
 extern "C" {
     fn get_rand(_: c_uint) -> c_uint;
@@ -35,7 +37,7 @@ impl Board {
             just_touched: [false; NUM_COLS * NUM_ROWS],
             chain: Default::default(),
             chains_valid: false,
-            next_garbage_id: 0,
+            next_garbage_id: START_GARBAGE_ID,
             user_row: 0,
             user_col: 2,
             bottom: 0,
@@ -118,6 +120,35 @@ impl Board {
         }
     }
 
+    fn trigger_garbage(&mut self, state: &[u32; NUM_ROWS * NUM_COLS], x: usize, y: usize) {
+        let mut garbage_ids = HashSet::new();
+        if x > 0 && state[x-1 + y * NUM_COLS] >= START_GARBAGE_ID {
+            garbage_ids.insert(state[x-1 + y * NUM_COLS]);
+        }
+        if x < NUM_COLS-1 && state[x+1 + y * NUM_COLS] >= START_GARBAGE_ID {
+            garbage_ids.insert(state[x-1 + y * NUM_COLS]);
+        }
+        if y > 0 && state[x + (y-1) * NUM_COLS] >= START_GARBAGE_ID {
+            garbage_ids.insert(state[x + (y-1) * NUM_COLS]);
+        }
+        if y < NUM_ROWS-1 && state[x + (y+1) * NUM_COLS] >= START_GARBAGE_ID {
+            garbage_ids.insert(state[x + (y+1) * NUM_COLS]);
+        }
+
+        for delete_id in garbage_ids {
+            for x in 0..NUM_COLS {
+                for y in 0..NUM_ROWS {
+                    let c = self.get_cell(x, y);
+                    if let Cell::Garbage(id, _) = c {
+                        if *id == delete_id {
+                            self.delete_block(x, y, *id, Chain::empty());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fn check_matches(&mut self) {
         let mut state = [0_u32; NUM_ROWS * NUM_COLS];
 
@@ -160,6 +191,10 @@ impl Board {
                         match_idx += 1;
                     }
                 }
+                if let Cell::Garbage(id,_) = c {
+                    let base_y = (self.bottom + y) % NUM_ROWS;
+                    state[base_y * NUM_COLS + x] = *id;
+                }
             }
         }
 
@@ -178,7 +213,8 @@ impl Board {
         for x in 0..NUM_COLS {
             for y in 0..NUM_ROWS {
                 let base_y = (self.bottom + y) % NUM_ROWS;
-                if state[base_y * NUM_COLS + x] > 0 {
+                if state[base_y * NUM_COLS + x] > 0 && state[base_y * NUM_COLS + x] < START_GARBAGE_ID {
+                    self.trigger_garbage(&state, x, base_y);
                     self.delete_block(x, y, state[base_y * NUM_COLS + x], self.chain);
                 }
             }

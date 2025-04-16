@@ -25,7 +25,7 @@ impl Cell {
             Cell::Single(v, _) => *v,
             Cell::QueuedDelete(v, _, _, _, _) => *v,
             Cell::DeathAnim(v, _, _, _) => *v,
-            Cell::Garbage(v, _) => *v,
+            Cell::Garbage(_, _) => 99, // TODO constify
         }
     }
 

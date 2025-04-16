@@ -5,6 +5,7 @@ GAMEPLAY TODOs:
 - try to not have the new row cause matches.
 - you can swap out and back really quickly once, we should avoid this I think.
 - don't clear the current chain if we make a non-chain match. Start a new one?
+- sometimes triggering the garbage doesn't work
 */
 
 use crate::board::*;
