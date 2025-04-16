@@ -967,6 +967,22 @@ const buttonTemplate = `
 					0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 				];
+
+				let garbage = [
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+				];
+
 				init_sprite_frame(0, 0, enemy0_0, 12, dim, 255, 0, 0);
 				init_sprite_frame(0, 1, enemy0_1, 12, dim, 255, 0, 0);
 				init_sprite_frame(1, 0, enemy1_0, 12, dim, 0, 255, 0);
@@ -979,6 +995,7 @@ const buttonTemplate = `
 				init_sprite_frame(4, 1, enemy4_1, 12, dim, 255, 0, 255);
 				init_sprite_frame(5, 0, enemy5_0, 12, dim, 0, 255, 255);
 				init_sprite_frame(5, 1, enemy5_1, 12, dim, 0, 255, 255);
+				init_sprite_frame(99, 0, garbage, 12, dim, 100,100,100);
 			}
 
 			function init_sprite_frame(sprite_id, frame_index, data, orig_dim, final_dim, r, g, b) {

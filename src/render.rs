@@ -187,6 +187,32 @@ impl RenderData {
                             _ => unsafe { draw_sprite(*id, 0, xb, yb, 0, 0, dim, dim) },
                         };
                     }
+                    Cell::Garbage(_id, offset) => {
+                        let offset_v = match offset {
+                            Some(v) => *v,
+                            None => 0.,
+                        };
+                        let xb = dim + x as u32 * dim;
+                        let yb = (NUM_ROWS - y) as u32 * dim - delta as u32
+                            + (dim as f64 * offset_v) as u32;
+
+                        match y {
+                            0 => unsafe { draw_sprite(99, 0, xb, yb, 0, 0, dim, delta as u32) },
+                            NUM_ROWS_MIN_1 => unsafe {
+                                draw_sprite(
+                                    99,
+                                    0,
+                                    xb,
+                                    yb,
+                                    0,
+                                    delta as u32,
+                                    dim,
+                                    dim - delta as u32,
+                                )
+                            },
+                            _ => unsafe { draw_sprite(99, 0, xb, yb, 0, 0, dim, dim) },
+                        };
+                    }                    
                     _ => {}
                 }
             }

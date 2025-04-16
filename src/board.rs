@@ -2,6 +2,7 @@ use crate::cell::*;
 use crate::chain::*;
 use std::ffi::c_uint;
 use crate::log::*;
+use std::collections::HashMap;
 
 pub const NUM_ROWS: usize = 12;
 pub const NUM_COLS: usize = 6;
@@ -18,6 +19,8 @@ pub struct Board {
     pub chain: Chain,
     chains_valid: bool,
 
+    next_garbage_id: u32,
+
     /// user cursor
     pub user_row: usize,
     pub user_col: usize,
@@ -32,6 +35,7 @@ impl Board {
             just_touched: [false; NUM_COLS * NUM_ROWS],
             chain: Default::default(),
             chains_valid: false,
+            next_garbage_id: 0,
             user_row: 0,
             user_col: 2,
             bottom: 0,
@@ -79,6 +83,13 @@ impl Board {
                     d.is_some()
                 }
             }
+            Cell::Garbage(_, d) => {
+                if y == 1 {
+                    false
+                } else {
+                    d.is_some()
+                }
+            }
             _ => false,
         }
     }
@@ -89,6 +100,10 @@ impl Board {
 
         let c1 = self.cells[base_y0 * NUM_COLS + x0];
         let c2 = self.cells[base_y1 * NUM_COLS + x1];
+
+        if user && matches!(c1, Cell::Garbage { .. }) || matches!(c2, Cell::Garbage { .. }) {
+            return;
+        }
 
         if c1.get_fall_offset() != 0. || c2.get_fall_offset() != 0. {
             return;
@@ -231,6 +246,9 @@ impl Board {
     }
 
     fn do_gravity(&mut self, dt: f64) {
+
+       let mut garbage_map : HashMap<u32, Vec<(usize,usize,bool)>> = HashMap::new();
+
         for y in 1..NUM_ROWS {
             for x in 0..NUM_COLS {
                 if self.below_is_empty(x, y) {
@@ -249,6 +267,9 @@ impl Board {
                         }
                         *o = Some(next_o);
                     }
+                    if let Cell::Garbage(id, _) = cell {
+                       garbage_map.entry(*id).or_insert(vec![]).push((x,y,true));
+                    }
                     if swap {
                         self.swap_cells(x, y, x, y - 1, false);
                     }
@@ -257,9 +278,40 @@ impl Board {
                     if let Cell::Single(_, o) = cell {
                         *o = None;
                     }
+                    if let Cell::Garbage(id,_) = cell {
+                        garbage_map.entry(*id).or_insert(vec![]).push((x,y,false));
+                    }
                 }
             }
         }
+
+        for (_, cells) in garbage_map {
+            let falling = cells.iter().fold(true, |acc,c| acc && c.2);
+            cells.iter().for_each(|c| {
+                let mut swap = false;
+                let cell = self.get_cell_mut(c.0, c.1);
+                if let Cell::Garbage(_, o) = cell {
+                    if falling {
+                        if o.is_none() {
+                            *o = Some(0.);
+                        }
+                        let prev_o = o.unwrap();
+                        let mut next_o = prev_o + dt * 4.;
+                        if next_o >= 1. {
+                            next_o = 0.;
+                            swap = true;
+                        }
+                        *o = Some(next_o);
+                    } else {
+                        *o = None;
+                    }
+                }
+                if swap {
+                    self.swap_cells(c.0, c.1, c.0, c.1 - 1, false);
+                }
+            });
+        }
+
     }
 
     pub fn swap_pieces_at_cursor(&mut self) {
@@ -289,6 +341,17 @@ impl Board {
         *self.get_cell_mut(5, 0) = Cell::Single(unsafe { get_rand(6) }, None);
     }
 
+    // TODO this can crash
+    pub fn new_garbage(&mut self) {
+        let id = self.next_garbage_id;
+        self.next_garbage_id += 1;
+        *self.get_cell_mut(1,11) = Cell::Garbage(id, None);
+        *self.get_cell_mut(2,11) = Cell::Garbage(id, None);
+        *self.get_cell_mut(3,11) = Cell::Garbage(id, None);
+        *self.get_cell_mut(4,11) = Cell::Garbage(id, None);
+        *self.get_cell_mut(5,11) = Cell::Garbage(id, None);
+    }
+
     pub fn update(&mut self, dt: f64, boost: bool) -> Option<u32> {
         self.check_queued_deletes(dt);
         self.check_death_anims(dt);
@@ -314,8 +377,7 @@ impl Board {
     }
 
     pub fn attack(&mut self) {
-        // TODO
-        log("ATTACKING THE PLAYER");
+        self.new_garbage();
     }
 
 }

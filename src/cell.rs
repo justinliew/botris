@@ -11,7 +11,7 @@ pub enum Cell {
     Single(u32, Option<FallOffset>),
     QueuedDelete(u32, u32, FallOffset, DeleteCountdown, Chain),
     DeathAnim(u32, FallOffset, DeathAnimFuture, DeathAnimCountdown),
-    _Block(u32, usize, usize), // TODO figure out how to represent this
+    Garbage(u32, Option<FallOffset>),
 }
 
 impl Cell {
@@ -25,21 +25,20 @@ impl Cell {
             Cell::Single(v, _) => *v,
             Cell::QueuedDelete(v, _, _, _, _) => *v,
             Cell::DeathAnim(v, _, _, _) => *v,
-            Cell::_Block(v, _, _) => *v,
+            Cell::Garbage(v, _) => *v,
         }
     }
 
     pub fn get_fall_offset(&self) -> f64 {
         match self {
             Cell::Single(_, o) => {
-                if o.is_some() {
-                    o.unwrap()
-                } else {
-                    0.
-                }
+                o.unwrap_or(0.)
             }
             Cell::QueuedDelete(_, _, o, _, _) => *o,
             Cell::DeathAnim(_, o, _, _) => *o,
+            Cell::Garbage(_, o) => {
+                o.unwrap_or(0.)
+            },
             _ => 0.,
         }
     }
