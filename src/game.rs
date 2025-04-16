@@ -3,9 +3,8 @@ GAMEPLAY TODOs:
 
 - verify that falling blocks don't match as they fall. I thought I fixed this but maybe not?
 - try to not have the new row cause matches.
-- timing for falling - do we want a delay?
 - you can swap out and back really quickly once, we should avoid this I think.
-
+- don't clear the current chain if we make a non-chain match. Start a new one?
 */
 
 use crate::board::*;
