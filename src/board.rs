@@ -13,6 +13,26 @@ extern "C" {
     fn get_rand(_: c_uint) -> c_uint;
 }
 
+#[derive(PartialEq)]
+pub enum CaptchaInput {
+    LEFT,
+    RIGHT,
+    UP,
+    DOWN,
+}
+
+// these match the sprite ids
+impl PartialEq<CaptchaInput> for u32 {
+    fn eq(&self, rhs: &CaptchaInput) -> bool {
+        match rhs {
+            CaptchaInput::LEFT => self == &100,
+            CaptchaInput::RIGHT => self == &101,
+            CaptchaInput::UP => self == &102,
+            CaptchaInput::DOWN => self == &103,
+        }
+    }
+}
+
 pub struct Board {
     pub delta: f64, // scroll between 0. and 1. of a row
     // we are storing this in rows, so to get something you go x + y*NUM_COLS
@@ -67,6 +87,38 @@ impl Board {
     pub fn get_cell_mut(&mut self, x: usize, y: usize) -> &mut Cell {
         let base_y = (self.bottom + y) % NUM_ROWS;
         &mut self.cells[base_y * NUM_COLS + x]
+    }
+
+    pub fn is_over_captcha(&self) -> bool {
+        let c1 = self.get_cell(self.user_col, self.user_row);
+        let c2 = self.get_cell(self.user_col+1, self.user_row);
+        matches!(c1,Cell::Captcha(_,_,_,_)) && matches!(c2,Cell::Captcha(_,_,_,_))
+    }
+
+    pub fn do_captcha_input(&mut self, input: CaptchaInput) {
+        let mut converts = vec![];
+        let c1 = self.get_cell_mut(self.user_col, self.user_row);
+        if let Cell::Captcha(_,v,_,m) = c1 {
+            if !*m {
+                if *v == input {
+                    *m = true;
+                }
+            } else {
+                let c2 = self.get_cell_mut(self.user_col+1, self.user_row);
+                if let Cell::Captcha(_,v,_,m) = c2 {
+                    if !*m {
+                        if *v == input {
+                            *m = true;
+                            converts.push((self.user_col,self.user_row));
+                        }
+                    }
+                }        
+            }
+        }
+        for c in converts {
+            *self.get_cell_mut(c.0, c.1) = Cell::Single(unsafe { get_rand(6) }, None);
+            *self.get_cell_mut(c.0+1, c.1) = Cell::Single(unsafe { get_rand(6) }, None);
+        }
     }
 
     pub fn below_is_empty(&self, x: usize, y: usize) -> bool {
@@ -135,19 +187,23 @@ impl Board {
             garbage_ids.insert(state[x + (y+1) * NUM_COLS]);
         }
 
+        let mut captchas = vec![];
         for delete_id in garbage_ids {
             for x in 0..NUM_COLS {
                 for y in 0..NUM_ROWS {
                     let c = self.get_cell(x, y);
-                    if let Cell::Garbage(id, _) = c {
+                    if let Cell::Garbage(id, o) = c {
                         if *id == delete_id {
-                            self.delete_block(x, y, *id, Chain::empty());
+                            captchas.push((x,y,*id, *o));
                         }
                     }
                 }
             }
         }
-    }
+        for captcha in &captchas {
+            self.captcha_block(captcha.0, captcha.1, captcha.2, captcha.3);
+        }
+}
 
     fn check_matches(&mut self) {
         let mut state = [0_u32; NUM_ROWS * NUM_COLS];
@@ -281,6 +337,12 @@ impl Board {
         *cell = Cell::QueuedDelete(val, idx, offset, 0.5, chain); // TODO tuning var
     }
 
+    fn captcha_block(&mut self, x: usize, y: usize, idx: u32, offset: Option<f64>) {
+        let cell = self.get_cell_mut(x, y);
+        let dir = unsafe {get_rand(4)};
+        *cell = Cell::Captcha(idx, 100+dir, offset,false); 
+    }
+
     fn do_gravity(&mut self, dt: f64) {
 
        let mut garbage_map : HashMap<u32, Vec<(usize,usize,bool)>> = HashMap::new();
@@ -306,6 +368,9 @@ impl Board {
                     if let Cell::Garbage(id, _) = cell {
                        garbage_map.entry(*id).or_insert(vec![]).push((x,y,true));
                     }
+                    if let Cell::Captcha(id,_, _,_) = cell {
+                        garbage_map.entry(*id).or_insert(vec![]).push((x,y,true));
+                    }
                     if swap {
                         self.swap_cells(x, y, x, y - 1, false);
                     }
@@ -315,6 +380,9 @@ impl Board {
                         *o = None;
                     }
                     if let Cell::Garbage(id,_) = cell {
+                        garbage_map.entry(*id).or_insert(vec![]).push((x,y,false));
+                    }
+                    if let Cell::Captcha(id,_,_,_) = cell {
                         garbage_map.entry(*id).or_insert(vec![]).push((x,y,false));
                     }
                 }
@@ -327,6 +395,22 @@ impl Board {
                 let mut swap = false;
                 let cell = self.get_cell_mut(c.0, c.1);
                 if let Cell::Garbage(_, o) = cell {
+                    if falling {
+                        if o.is_none() {
+                            *o = Some(0.);
+                        }
+                        let prev_o = o.unwrap();
+                        let mut next_o = prev_o + dt * 4.;
+                        if next_o >= 1. {
+                            next_o = 0.;
+                            swap = true;
+                        }
+                        *o = Some(next_o);
+                    } else {
+                        *o = None;
+                    }
+                }
+                if let Cell::Captcha(_, _, o,_) = cell {
                     if falling {
                         if o.is_none() {
                             *o = Some(0.);
@@ -379,13 +463,11 @@ impl Board {
 
     // TODO this can crash
     pub fn new_garbage(&mut self) {
+        let start : usize = unsafe {get_rand(5)} as usize;
         let id = self.next_garbage_id;
         self.next_garbage_id += 1;
-        *self.get_cell_mut(1,11) = Cell::Garbage(id, None);
-        *self.get_cell_mut(2,11) = Cell::Garbage(id, None);
-        *self.get_cell_mut(3,11) = Cell::Garbage(id, None);
-        *self.get_cell_mut(4,11) = Cell::Garbage(id, None);
-        *self.get_cell_mut(5,11) = Cell::Garbage(id, None);
+        *self.get_cell_mut(start,11) = Cell::Garbage(id, None);
+        *self.get_cell_mut(start+1,11) = Cell::Garbage(id, None);
     }
 
     pub fn update(&mut self, dt: f64, boost: bool) -> Option<u32> {

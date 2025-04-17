@@ -118,25 +118,49 @@ impl Game {
         return false;
     }
 
+    fn is_over_captcha(&self) -> bool {
+        self.board.is_over_captcha()
+    }
+
     pub fn handle_input(&mut self, dt: f64, input: &Input) {
+
+        // if we are over a captcha, it eats the input until it's done
+        let is_captcha = self.is_over_captcha();
+
         if Game::do_input(input.left, &mut self.last_left) {
-            if self.board.user_col > 0 {
-                self.board.user_col -= 1;
+            if is_captcha {
+                self.board.do_captcha_input(CaptchaInput::LEFT);
+            } else {
+                if self.board.user_col > 0 {
+                    self.board.user_col -= 1;
+                }    
             }
         }
         if Game::do_input(input.right, &mut self.last_right) {
-            if self.board.user_col < NUM_COLS - 2 {
-                self.board.user_col += 1;
+            if is_captcha {
+                self.board.do_captcha_input(CaptchaInput::RIGHT);
+            } else {
+                if self.board.user_col < NUM_COLS - 2 {
+                    self.board.user_col += 1;
+                }    
             }
         }
         if Game::do_input(input.up, &mut self.last_up) {
-            if self.board.user_row < NUM_ROWS - 2 {
-                self.board.user_row += 1;
+            if is_captcha {
+                self.board.do_captcha_input(CaptchaInput::UP);
+            } else {
+                if self.board.user_row < NUM_ROWS - 2 {
+                    self.board.user_row += 1;
+                }    
             }
         }
         if Game::do_input(input.down, &mut self.last_down) {
-            if self.board.user_row > 0 {
-                self.board.user_row -= 1;
+            if is_captcha {
+                self.board.do_captcha_input(CaptchaInput::DOWN);
+            } else {
+                if self.board.user_row > 0 {
+                    self.board.user_row -= 1;
+                }    
             }
         }
         if input.action {

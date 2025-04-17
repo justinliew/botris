@@ -983,6 +983,62 @@ const buttonTemplate = `
 					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 				];
 
+				let arrowl = [
+					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+					0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				];
+				let arrowr = [
+					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+					0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,
+					0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				];				
+				let arrowu = [
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0,
+					0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0,
+					0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
+					0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+				];
+				let arrowd = [
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+					0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+					0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
+					0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0,
+					0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+				];				
 				init_sprite_frame(0, 0, enemy0_0, 12, dim, 255, 0, 0);
 				init_sprite_frame(0, 1, enemy0_1, 12, dim, 255, 0, 0);
 				init_sprite_frame(1, 0, enemy1_0, 12, dim, 0, 255, 0);
@@ -996,6 +1052,14 @@ const buttonTemplate = `
 				init_sprite_frame(5, 0, enemy5_0, 12, dim, 0, 255, 255);
 				init_sprite_frame(5, 1, enemy5_1, 12, dim, 0, 255, 255);
 				init_sprite_frame(99, 0, garbage, 12, dim, 100,100,100);
+				init_sprite_frame(100, 0, arrowl, 12, dim, 100,0,0);
+				init_sprite_frame(101, 0, arrowr, 12, dim, 100,0,0);
+				init_sprite_frame(102, 0, arrowu, 12, dim, 100,0,0);
+				init_sprite_frame(103, 0, arrowd, 12, dim, 100,0,0);
+				init_sprite_frame(100, 1, arrowl, 12, dim, 0,100,0);
+				init_sprite_frame(101, 1, arrowr, 12, dim, 0,100,0);
+				init_sprite_frame(102, 1, arrowu, 12, dim, 0,100,0);
+				init_sprite_frame(103, 1, arrowd, 12, dim, 0,100,0);
 			}
 
 			function init_sprite_frame(sprite_id, frame_index, data, orig_dim, final_dim, r, g, b) {
@@ -1024,19 +1088,8 @@ const buttonTemplate = `
 						sprites[sprite_id][frame_index].image_data.data[4 * dest_index + 1] = data[source_index] > 0 ? g : 0;
 						sprites[sprite_id][frame_index].image_data.data[4 * dest_index + 2] = data[source_index] > 0 ? b : 0;
 						sprites[sprite_id][frame_index].image_data.data[4 * dest_index + 3] = 255;
-			}
+					}
 				}
-
-				// for (var j = 0; j < final_size; ++j) {
-				// 	for (var i = 0; i < final_size; ++i) {
-				// 		var dest_index = i + j * final_size;
-				// 		var source_index = Math.floor(i / scale) + Math.floor(j / scale) * orig_dim;
-				// 		sprites[sprite_id][frame_index].image_data.data[4 * dest_index] = data[source_index] > 0 ? r : 0;
-				// 		sprites[sprite_id][frame_index].image_data.data[4 * dest_index + 1] = data[source_index] > 0 ? g : 0;
-				// 		sprites[sprite_id][frame_index].image_data.data[4 * dest_index + 2] = data[source_index] > 0 ? b : 0;
-				// 		sprites[sprite_id][frame_index].image_data.data[4 * dest_index + 3] = 255;
-				// 	}
-				// }
 			}
 
 			// Resizing

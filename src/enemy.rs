@@ -2,7 +2,7 @@ pub struct Enemy {
     pub countdown: f64,
 }
 
-const COOLDOWN : f64 = 30.;
+const COOLDOWN : f64 = 5.;
 
 impl Enemy {
     pub fn new() -> Self {

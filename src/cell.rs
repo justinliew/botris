@@ -12,6 +12,7 @@ pub enum Cell {
     QueuedDelete(u32, u32, FallOffset, DeleteCountdown, Chain),
     DeathAnim(u32, FallOffset, DeathAnimFuture, DeathAnimCountdown),
     Garbage(u32, Option<FallOffset>),
+    Captcha(u32, u32, Option<FallOffset>, bool),
 }
 
 impl Cell {
@@ -26,6 +27,7 @@ impl Cell {
             Cell::QueuedDelete(v, _, _, _, _) => *v,
             Cell::DeathAnim(v, _, _, _) => *v,
             Cell::Garbage(_, _) => 99, // TODO constify
+            Cell::Captcha(v, _, _,_) => *v, // TODO what should this be
         }
     }
 
